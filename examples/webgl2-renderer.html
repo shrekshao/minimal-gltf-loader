@@ -110,7 +110,7 @@
         //var gltfUrl = '../glTFs/Reciprocating_Saw/Reciprocating_Saw.gltf';
         //var gltfUrl = '../glTFs/buggy/buggy.gltf';
 
-        var glTFLoader = new MinimalGLTFLoader.glTFLoader();
+        var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
 
