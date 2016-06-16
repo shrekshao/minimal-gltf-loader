@@ -4,6 +4,10 @@
 
 A minimal JavaScript glTF Loader without need of 3D engines like Three.js. 
 
+## Viewer Screenshot
+
+![](img/viewer-screenshot.png)
+
 ## Features List
 
 * [x] Geometry Loader
