@@ -77,7 +77,7 @@
         
         // -- Mouse Behaviour
         var s = 0.1;
-        var t = -10;
+        var t = -100;
         var mouseDown = false;
         var lastMouseY = 0;
         window.onmousedown = function(event) {
@@ -99,12 +99,14 @@
             
             lastMouseY = newY;
         };
-        
+        window.onwheel = function(event) {
+            t += -event.deltaY / 10;
+        };
 
         // -- Load glTF then render
         //var gltfUrl = '../glTFs/duck/duck.gltf';
-        var gltfUrl = '../glTFs/CesiumMilkTruck/CesiumMilkTruck.gltf'
-        //var gltfUrl = '../glTFs/2_cylinder_engine/2_cylinder_engine.gltf';
+        //var gltfUrl = '../glTFs/CesiumMilkTruck/CesiumMilkTruck.gltf'
+        var gltfUrl = '../glTFs/2_cylinder_engine/2_cylinder_engine.gltf';
         //var gltfUrl = '../glTFs/Reciprocating_Saw/Reciprocating_Saw.gltf';
         //var gltfUrl = '../glTFs/buggy/buggy.gltf';
 
@@ -206,7 +208,7 @@
             gl.depthFunc(gl.LEQUAL);
 
             var translate = vec3.create();
-            vec3.set(translate, 0, 0, t);
+            
             var scale = vec3.create();
             
             var r = 0.0;
@@ -226,6 +228,7 @@
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
+                vec3.set(translate, 0, 0, t);
                 vec3.set(scale, s, s, s);
                 mat4.identity(modelView);
                 mat4.translate(modelView, modelView, translate);
