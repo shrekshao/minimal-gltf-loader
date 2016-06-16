@@ -1,4 +1,4 @@
-# Minimal-glTF-Loader
+# minimal-gltf-loader
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/WebGLSamples/WebGL2Samples/blob/master/LICENSE.md)
 
 A minimal JavaScript glTF Loader without need of 3D engines like Three.js. 
@@ -15,8 +15,6 @@ A minimal JavaScript glTF Loader without need of 3D engines like Three.js.
 
 * [ ] WebGL 1 simple renderer
 * [ ] WebGL 2 simple renderer
-
-
 
 
 ## Credits
