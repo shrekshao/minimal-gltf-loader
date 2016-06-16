@@ -1,6 +1,7 @@
 'use strict';
 
 var jshint = require('gulp-jshint');
+var uglify = require('gulp-uglify');
 var gulp = require('gulp');
 
 var jsHintFiles = [
@@ -32,4 +33,10 @@ gulp.task('jsHint-watch', function() {
             .pipe(jshint())
             .pipe(jshint.reporter('jshint-stylish'));
     });
+});
+
+gulp.task('compress', function() {
+  return gulp.src('src/minimal-gltf-loader.js')
+    .pipe(uglify())
+    .pipe(gulp.dest('build'));
 });
