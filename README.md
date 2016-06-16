@@ -8,13 +8,21 @@ A minimal JavaScript glTF Loader without need of 3D engines like Three.js.
 
 ![](img/viewer-screenshot.png)
 
-## Features List
+## Features
 
 * [x] Geometry Loader
     * [x] Multi hirerachy support
 * [ ] Image
 * [ ] Shader
 * [ ] Animation
+* [ ] Skins
+
+## Formats
+
+* [x] glTF (.gltf) with separate resources: .bin (geometry, animation, skins), .glsl (shaders), and image files
+* [ ] glTF (.gltf) with embedded resources
+* [ ] Binary glTF (.glb) using the [KHR_binary_glTF](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_binary_glTF/README.md) extension
+* [ ] glTF (.gltf) using the [KHR_materials_common](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_materials_common/README.md) extension
 
 ## Examples
 
