@@ -252,8 +252,20 @@
                                 var value = p.value || material.values[u];
                                 // TODO: when material doesn't have value, use some default
                                 switch(p.type) {
+                                    // case 5120: // BYTE
+                                    // gl.uniform1f(u_locations[uniform], value);
+                                    // break;
+                                    
+                                    case 5124: // INT
+                                    gl.uniform1i(u_locations[uniform], value);
+                                    break;
+
                                     case 5126: // FLOAT
                                     gl.uniform1f(u_locations[uniform], value);
+                                    break;
+                                    
+                                    case 35664: // FLOAT_VEC2
+                                    gl.uniform2f(u_locations[uniform], value[0], value[1]);
                                     break;
                                     
                                     case 35665: // FLOAT_VEC3
@@ -262,6 +274,18 @@
                                     
                                     case 35666: // FLOAT_VEC4
                                     gl.uniform4f(u_locations[uniform], value[0], value[1], value[2], value[3]);
+                                    break;
+
+                                    case 35667: // INT_VEC2
+                                    gl.uniform2i(u_locations[uniform], value[0], value[1]);
+                                    break;
+                                    
+                                    case 35668: // INT_VEC3
+                                    gl.uniform3i(u_locations[uniform], value[0], value[1], value[2]);
+                                    break;
+                                    
+                                    case 35669: // INT_VEC4
+                                    gl.uniform4i(u_locations[uniform], value[0], value[1], value[2], value[3]);
                                     break;
                                     //TODO
                                     
