@@ -12,11 +12,13 @@ A minimal JavaScript glTF Loader without need of 3D engines like Three.js.
 
 * [x] Geometry Loader
     * [x] Multi hirerachy support
-* [ ] Image
-* [ ] Material
-* [ ] Shader
+* [x] Material
+* [ ] Texture
+* [x] Shader
 * [ ] Animation
 * [ ] Skins
+
+In development: has problem when loading large models.
 
 ## Formats
 
