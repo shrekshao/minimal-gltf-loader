@@ -38,10 +38,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
 
-        // Program gl buffer name 
-        // ?? reconsider if it's suitable to put it here
-        this.indicesWebGLBufferName = null;
-        this.vertexWebGLBufferName = null;
+        // // Program gl buffer name 
+        // // ?? reconsider if it's suitable to put it here
+        // this.indicesWebGLBufferName = null;
+        // this.vertexWebGLBufferName = null;
 
     };
 

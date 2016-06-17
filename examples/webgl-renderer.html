@@ -90,6 +90,8 @@
             var vertexBuffer;
             var indicesBuffer;
 
+            var primitiveWebGLBufferNames = [];
+
             var material;
             var technique;
             var program;
@@ -106,7 +108,7 @@
 
             var i,len;
 
-
+            var primitiveOrderID;
 
             
 
@@ -139,8 +141,12 @@
                     vertexBuffer = gl.createBuffer();
                     indicesBuffer = gl.createBuffer();
 
-                    primitive.vertexWebGLBufferName = vertexBuffer;
-                    primitive.indicesWebGLBufferName = indicesBuffer;
+                    primitiveWebGLBufferNames.push({
+                        vertexBufferName: vertexBuffer,
+                        indicesBufferName: indicesBuffer
+                    });
+                    // primitive.vertexWebGLBufferName = vertexBuffer;
+                    // primitive.indicesWebGLBufferName = indicesBuffer;
 
                     // -- Initialize buffer
                     var vertices = primitive.vertexBuffer;
@@ -192,10 +198,13 @@
                 r += rotationSpeedY;
                 mat4.rotateY(modelView, modelView, r);
 
+
+                primitiveOrderID = 0;
+
                 for (var mid in curScene.meshes) {
                     mesh = curScene.meshes[mid];
 
-                    for (i = 0, len = mesh.primitives.length; i < len; ++i) {
+                    for (i = 0, len = mesh.primitives.length; i < len; ++i, ++primitiveOrderID) {
                         primitive = mesh.primitives[i];
 
                         // prepare transformation matrix
@@ -265,7 +274,8 @@
                         }
 
                         // attributes
-                        gl.bindBuffer(gl.ARRAY_BUFFER, primitive.vertexWebGLBufferName);
+                        //gl.bindBuffer(gl.ARRAY_BUFFER, primitive.vertexWebGLBufferName);
+                        gl.bindBuffer(gl.ARRAY_BUFFER, primitiveWebGLBufferNames[primitiveOrderID].vertexBufferName);
                         for (var attribute in technique.attributes) {
                             attributeInfo = primitive.attributes[technique.parameters[technique.attributes[attribute]].semantic];
                             gl.vertexAttribPointer(
@@ -279,7 +289,8 @@
                             gl.enableVertexAttribArray(a_locations[attribute]);
                         }
                         
-                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, primitive.indicesWebGLBufferName);
+                        //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, primitive.indicesWebGLBufferName);
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, primitiveWebGLBufferNames[primitiveOrderID].indicesBufferName);
 
 
                         // TODO: when no indices, do drawArrays
