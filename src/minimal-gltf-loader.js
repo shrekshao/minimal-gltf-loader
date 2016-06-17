@@ -2,7 +2,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 (function() {
     'use strict';
 
-
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
         // not 1-1 to meshes in json file
@@ -20,6 +19,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     var Primitive = MinimalGLTFLoader.Primitive = function () {
         this.mode = 4; // default: gl.TRIANGLES
+        
+        this.matrix = mat4.create();
 
         this.indices = null;
         this.indicesComponentType = 5123;   // default: gl.UNSIGNED_SHORT
@@ -28,10 +29,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // see discussion https://github.com/KhronosGroup/glTF/issues/21
         this.vertexBuffer = null;
 
-        this.matrix = mat4.create();
-
         // attribute info (stride, offset, etc)
         this.attributes = {};
+
+        // cur glTF spec supports only one material per primitive
+        this.material = null;
+        this.technique = null;
+
+
+
+        // // Program gl buffer name 
+        // // ?? reconsider if it's suitable to put it here
+        // this.indicesWebGLBufferName = null;
+        // this.vertexWebGLBufferName = null;
+
     };
 
 
@@ -42,12 +53,21 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.defaultScene = '';
         this.scenes = {};
 
+        this.nodeMatrix = {};
+
         this.json = null;
+
+        this.shaders = {};
+        this.programs = {};
+
     };
 
 
 
-    var glTFLoader = MinimalGLTFLoader.glTFLoader = function () {
+    var gl;
+
+    var glTFLoader = MinimalGLTFLoader.glTFLoader = function (glContext) {
+        gl = glContext;
         this._init();
         this.glTF = null;
     };
@@ -62,6 +82,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this._bufferTasks = {};
 
         this._bufferViews = {};
+
+        this._shaderRequested = 0;
+        this._shaderLoaded = 0;
+
+
 
         this._pendingTasks = 0;
         this._finishedPendingTasks = 0;
@@ -125,7 +150,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     // };
 
     glTFLoader.prototype._checkComplete = function () {
-        if (this._bufferRequested == this._bufferLoaded
+        if (this._bufferRequested == this._bufferLoaded && this._shaderRequested == this._shaderLoaded
             // && other resources finish loading
             ) {
             this._loadDone = true;
@@ -143,21 +168,23 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.glTF.defaultScene = json.scene;
 
         // Iterate through every scene
-        for (var sceneID in json.scenes) {
-            var newScene = new Scene();
-            this.glTF.scenes[sceneID] = newScene;
+        if (json.scenes) {
+            for (var sceneID in json.scenes) {
+                var newScene = new Scene();
+                this.glTF.scenes[sceneID] = newScene;
 
-            var scene = json.scenes[sceneID];
-            var nodes = scene.nodes;
-            var nodeLen = nodes.length;
+                var scene = json.scenes[sceneID];
+                var nodes = scene.nodes;
+                var nodeLen = nodes.length;
 
-            // Iterate through every node within scene
-            for (var n = 0; n < nodeLen; ++n) {
-                var nodeName = nodes[n];
-                var node = json.nodes[nodeName];
+                // Iterate through every node within scene
+                for (var n = 0; n < nodeLen; ++n) {
+                    var nodeID = nodes[n];
+                    //var node = json.nodes[nodeName];
 
-                // Traverse node
-                this._parseNode(json, node, newScene);
+                    // Traverse node
+                    this._parseNode(json, nodeID, newScene);
+                }
             }
         }
 
@@ -171,7 +198,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var scaleVec3 = vec3.create();
     var TRMatrix = mat4.create();
     
-    glTFLoader.prototype._parseNode = function(json, node, newScene, matrix) {
+    glTFLoader.prototype._parseNode = function(json, nodeID, newScene, matrix) {
+        var node = json.nodes[nodeID];
 
         if (matrix === undefined) {
             matrix = mat4.create();
@@ -196,6 +224,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             vec3.set(scaleVec3, node.scale[0], node.scale[1], node.scale[2]);
             mat4.scale(curMatrix, curMatrix, scaleVec3);
         }
+
+        // store node matrix
+        this.glTF.nodeMatrix[nodeID] = curMatrix;
+
+
             
         // Iterate through every mesh within node
         var meshes = node.meshes;
@@ -225,6 +258,16 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     }
                     
                     this._parseAttributes(json, primitive, newPrimitive, curMatrix);
+
+                    // required
+                    newPrimitive.material = json.materials[primitive.material];
+                    
+                    if (newPrimitive.material.technique) {
+                        newPrimitive.technique = json.techniques[newPrimitive.material.technique];
+                    } else {
+                        // TODO: use default technique in glTF spec Appendix A
+                    }
+                     
                 }
             }
         }
@@ -234,9 +277,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         var children = node.children;
         var childreLen = children.length;
         for (var c = 0; c < childreLen; ++c) {
-            var childName = children[c];
-            var childNode = json.nodes[childName];
-            this._parseNode(json, childNode, newScene, curMatrix);
+            var childNodeID = children[c];
+            this._parseNode(json, childNodeID, newScene, curMatrix);
         }
 
     };
@@ -358,6 +400,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
      * @param {Function} callback the onload callback function
      */
     glTFLoader.prototype.loadGLTF = function (uri, callback) {
+
         this._init();
 
         this.onload = callback || function(glTF) {
@@ -376,34 +419,75 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // Parse JSON string into object
             var json = JSON.parse(response);
 
-            var b;
+            var bid;
 
             var loadArrayBufferCallback = function (resource) {
                 
-                loader._buffers[b] = resource;
+                loader._buffers[bid] = resource;
                 loader._bufferLoaded++;
-                if (loader._bufferTasks[b]) {
+                if (loader._bufferTasks[bid]) {
                     var i,len;
-                    for (i = 0, len = loader._bufferTasks[b].length; i < len; ++i) {
-                        (loader._bufferTasks[b][i])(resource);
+                    for (i = 0, len = loader._bufferTasks[bid].length; i < len; ++i) {
+                        (loader._bufferTasks[bid][i])(resource);
                     }
                 }
                 loader._checkComplete();
 
             };
 
-            // Launch loading resources: buffers, images, etc.
+            // Launch loading resources task: buffers, etc.
             if (json.buffers) {
-                for (b in json.buffers) {
+                for (bid in json.buffers) {
 
                     loader._bufferRequested++;
 
-                    _loadArrayBuffer(loader.baseUri + '/' + json.buffers[b].uri, loadArrayBufferCallback);
+                    _loadArrayBuffer(loader.baseUri + '/' + json.buffers[bid].uri, loadArrayBufferCallback);
 
                 }
             }
 
-            // Meanwhile start glTF scene parsing
+
+            var pid;
+            var newProgram;
+
+            var loadVertexShaderFileCallback = function (resource) {
+                loader._shaderLoaded++;
+                newProgram.vertexShader = resource;
+                if (newProgram.fragmentShader) {
+                    // create Program
+                    newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
+                    loader._checkComplete();
+                }
+            };
+            var loadFragmentShaderFileCallback = function (resource) {
+                loader._shaderLoaded++;
+                newProgram.fragmentShader = resource;
+                if (newProgram.vertexShader) {
+                    // create Program
+                    newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
+                    loader._checkComplete();
+                }
+            };
+
+            if (json.programs) {
+                for (pid in json.programs) {
+                    newProgram = loader.glTF.programs[pid] = {
+                        vertexShader: null,
+                        fragmentShader: null,
+                        program: null
+                    };
+                    var program = json.programs[pid];
+                    loader._shaderRequested += 2;
+
+                    _loadShaderFile(loader.baseUri + '/' + json.shaders[program.vertexShader].uri, loadVertexShaderFileCallback);
+                    _loadShaderFile(loader.baseUri + '/' + json.shaders[program.fragmentShader].uri, loadFragmentShaderFileCallback);
+                }
+            }
+
+
+
+
+            // start glTF scene parsing
             loader._parseGLTF(json);
         });
     };
@@ -439,6 +523,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         'WEIGHT'
     ];
 
+    // MinimalGLTFLoader.UniformFunctionsBind = {
+    //     35676: gl.uniformMatrix4fv      // FLOAT_MAT4 
+    // };
+
+
     // ------ Scope limited private util functions---------------
 
     function _arrayBuffer2TypedArray(resource, byteOffset, countOfComponentType, componentType) {
@@ -446,6 +535,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // @todo: finish
             case 5122: return new Int16Array(resource, byteOffset, countOfComponentType);
             case 5123: return new Uint16Array(resource, byteOffset, countOfComponentType);
+            case 5124: return new Int32Array(resource, byteOffset, countOfComponentType);
+            case 5125: return new Uint32Array(resource, byteOffset, countOfComponentType);
             case 5126: return new Float32Array(resource, byteOffset, countOfComponentType);
             default: return null; 
         }
@@ -504,6 +595,59 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
         };
         xobj.send(null);
+    }
+
+    function _loadShaderFile(url, callback) {
+        var xobj = new XMLHttpRequest();
+        xobj.responseType = 'text';
+        xobj.open('GET', url, true);
+        xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && // Request finished, response ready
+                xobj.status == "200") { // Status OK
+                var file = xobj.response;
+                if (file && callback) {
+                    callback(file);
+                }
+            }
+        };
+        xobj.send(null);
+    }
+
+
+
+    function _createShader(gl, source, type) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    function _createProgram(gl, vertexShaderSource, fragmentShaderSource) {
+        var program = gl.createProgram();
+        var vshader = _createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
+        var fshader = _createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+        gl.attachShader(program, vshader);
+        gl.deleteShader(vshader);
+        gl.attachShader(program, fshader);
+        gl.deleteShader(fshader);
+        gl.linkProgram(program);
+
+        var log = gl.getProgramInfoLog(program);
+        if (log) {
+            console.log(log);
+        }
+
+        log = gl.getShaderInfoLog(vshader);
+        if (log) {
+            console.log(log);
+        }
+
+        log = gl.getShaderInfoLog(fshader);
+        if (log) {
+            console.log(log);
+        }
+
+        return program;
     }
 
 })();

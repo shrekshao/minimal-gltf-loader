@@ -1,5 +1,5 @@
 # minimal-gltf-loader
-[![BuildStatus](https://travis-ci.org/shrekshao/minimal-gltf-loader.svg?branch=master)](https://travis-ci.org/shrekshao/minimal-gltf-loader)
+[![Build Status](https://travis-ci.org/shrekshao/minimal-gltf-loader.svg?branch=master)](https://travis-ci.org/shrekshao/minimal-gltf-loader)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/shrekshao/minimal-gltf-loader/blob/master/LICENSE.md)
 
 A minimal JavaScript glTF Loader without need of 3D engines like Three.js. 
@@ -8,13 +8,24 @@ A minimal JavaScript glTF Loader without need of 3D engines like Three.js.
 
 ![](img/viewer-screenshot.png)
 
-## Features List
+## Features
 
 * [x] Geometry Loader
     * [x] Multi hirerachy support
-* [ ] Image
-* [ ] Shader
+* [x] Material
+* [ ] Texture
+* [x] Shader
 * [ ] Animation
+* [ ] Skins
+
+In development: has problem when loading large models.
+
+## Formats
+
+* [x] glTF (.gltf) with separate resources: .bin (geometry, animation, skins), .glsl (shaders), and image files
+* [ ] glTF (.gltf) with embedded resources
+* [ ] Binary glTF (.glb) using the [KHR_binary_glTF](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_binary_glTF/README.md) extension
+* [ ] glTF (.gltf) using the [KHR_materials_common](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_materials_common/README.md) extension
 
 ## Examples
 
