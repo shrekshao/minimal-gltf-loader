@@ -447,7 +447,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
                     loader._bufferRequested++;
 
-                    _loadArrayBuffer(loader.baseUri + '/' + json.buffers[bid].uri, loadArrayBufferCallback);
+                    _loadArrayBuffer(loader.baseUri + json.buffers[bid].uri, loadArrayBufferCallback);
 
                 }
             }
@@ -464,7 +464,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             if (json.images) {
                 for (iid in json.images) {
                     loader._imageRequested++;
-                    _loadImage(loader.baseUri + '/' + json.images[iid].uri, loadImageCallback);
+                    _loadImage(loader.baseUri + json.images[iid].uri, loadImageCallback);
                 }
             }
 
@@ -502,8 +502,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     var program = json.programs[pid];
                     loader._shaderRequested += 2;
 
-                    _loadShaderFile(loader.baseUri + '/' + json.shaders[program.vertexShader].uri, loadVertexShaderFileCallback);
-                    _loadShaderFile(loader.baseUri + '/' + json.shaders[program.fragmentShader].uri, loadFragmentShaderFileCallback);
+                    _loadShaderFile(loader.baseUri + json.shaders[program.vertexShader].uri, loadVertexShaderFileCallback);
+                    _loadShaderFile(loader.baseUri + json.shaders[program.fragmentShader].uri, loadFragmentShaderFileCallback);
                 }
             }
 

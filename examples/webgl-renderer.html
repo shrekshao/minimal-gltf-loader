@@ -35,8 +35,10 @@
         }
         
         // -- Mouse Behaviour
-        var s = 0.1;
-        var t = -100;
+        //var s = 0.1;
+        var s = 1;
+        //var t = [0, 0, -100];
+        var t = [0,-1,-5];
         var mouseDown = false;
         var lastMouseY = 0;
         window.onmousedown = function(event) {
@@ -59,7 +61,7 @@
             lastMouseY = newY;
         };
         window.onwheel = function(event) {
-            t += -event.deltaY / 10;
+            t[2] += -event.deltaY / 10;
         };
 
         // -- Load glTF then render
@@ -125,20 +127,20 @@
             var sampler;
 
 
-            // samplers
-            for (var sid in glTF.json.samplers) {
-                samplerInfo = glTF.json.samplers[sid];
-                magFilter = samplerInfo.magFilter || gl.LINEAR;
-                minFilter = samplerInfo.minFilter || gl.NEAREST_MIPMAP_LINEAR;
-                wrapS = samplerInfo.wrapS || gl.REPEAT;
-                wrapT = samplerInfo.wrapT || gl.REPEAT;
+            // // samplers
+            // for (var sid in glTF.json.samplers) {
+            //     samplerInfo = glTF.json.samplers[sid];
+            //     magFilter = samplerInfo.magFilter || gl.LINEAR;
+            //     minFilter = samplerInfo.minFilter || gl.NEAREST_MIPMAP_LINEAR;
+            //     wrapS = samplerInfo.wrapS || gl.REPEAT;
+            //     wrapT = samplerInfo.wrapT || gl.REPEAT;
 
-                sampler = webGLSamplers[sid] = gl.createSampler();
-                gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, minFilter);
-                gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, magFilter);
-                gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
-                gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
-            }
+            //     sampler = webGLSamplers[sid] = gl.createSampler();
+            //     gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, minFilter);
+            //     gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, magFilter);
+            //     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
+            //     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
+            // }
 
             // textures
             for (var tid in glTF.json.textures) {
@@ -164,12 +166,32 @@
                     // TODO
                 };
 
+                // !! Sampler
+                // raw WebGL 1, no sampler object, set magfilter, wrapS, etc
+                samplerInfo = glTF.json.samplers[textureInfo.sampler];
+                minFilter = samplerInfo.minFilter || gl.NEAREST_MIPMAP_LINEAR;
+                magFilter = samplerInfo.magFilter || gl.LINEAR;
+                wrapS = samplerInfo.wrapS || gl.REPEAT;
+                wrapT = samplerInfo.wrapT || gl.REPEAT;
+                gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, minFilter);
+                gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, magFilter);
+                gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrapS);
+                gl.texParameteri(target, gl.TEXTURE_WRAP_T, wrapT);
+                if (minFilter == gl.NEAREST_MIPMAP_NEAREST || 
+                    minFilter == gl.NEAREST_MIPMAP_LINEAR || 
+                    minFilter == gl.LINEAR_MIPMAP_NEAREST ||
+                    minFilter == gl.LINEAR_MIPMAP_LINEAR ) {
+                        gl.generateMipmap(target);
+                }
+
+
                 gl.bindTexture(target, null);
 
                 webGLTextures[tid] = {
                     texture: texture,
-                    id: gl.TEXTURE0 + textureID,
-                    sampler: webGLSamplers[textureInfo.sampler]
+                    target: target,
+                    id: textureID
+                    //sampler: webGLSamplers[textureInfo.sampler]
                 };
 
                 textureID++;
@@ -255,7 +277,7 @@
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
-                vec3.set(translate, 0, 0, t);
+                vec3.set(translate, t[0], t[1], t[2]);
                 vec3.set(scale, s, s, s);
                 mat4.identity(modelView);
                 mat4.translate(modelView, modelView, translate);
@@ -361,8 +383,9 @@
 
                                     case 35678: // SAMPLER_2D
                                     texture = webGLTextures[value];
-                                    sampler = webGLTextures[texture.sampler];
-                                    gl.uniform1i(u_locations[uniform], sampler);
+                                    gl.uniform1i(u_locations[uniform], texture.id);
+                                    //sampler = webGLSamplers[texture.sampler];
+                                    //gl.uniform1i(u_locations[uniform], sampler);
                                     break;
 
                                     //TODO
@@ -395,7 +418,9 @@
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, primitiveWebGLBufferNames[primitiveOrderID].indicesBufferName);
 
                         if (texture) {
-                            gl.activeTexture(texture.id);
+                            gl.activeTexture(gl.TEXTURE0 + texture.id);
+                            gl.bindTexture(texture.target, texture.texture);
+                            //gl.bindSampler(0, sampler);
                         }
                         
 
