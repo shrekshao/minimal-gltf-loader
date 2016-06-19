@@ -9,6 +9,8 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 ![](img/viewer-screenshot.png)
 ![](img/viewer-screenshot-2.png)
 
+:exclamation: In Development
+
 ## Features
 
 * [x] Geometry Loader
