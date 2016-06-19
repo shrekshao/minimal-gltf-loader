@@ -60,6 +60,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.shaders = {};
         this.programs = {};
 
+        this.images = {};
+
     };
 
 
@@ -81,12 +83,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this._buffers = {};
         this._bufferTasks = {};
 
+        // ?? Move to glTFModel to avoid collected by GC ?? 
         this._bufferViews = {};
 
         this._shaderRequested = 0;
         this._shaderLoaded = 0;
 
-
+        this._imageRequested = 0;
+        this._imageLoaded = 0;
 
         this._pendingTasks = 0;
         this._finishedPendingTasks = 0;
@@ -150,7 +154,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     // };
 
     glTFLoader.prototype._checkComplete = function () {
-        if (this._bufferRequested == this._bufferLoaded && this._shaderRequested == this._shaderLoaded
+        if (this._bufferRequested == this._bufferLoaded && 
+            this._shaderRequested == this._shaderLoaded && 
+            this._imageRequested == this._imageLoaded 
             // && other resources finish loading
             ) {
             this._loadDone = true;
@@ -446,7 +452,24 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 }
             }
 
+            // load images
+            var iid;
 
+            var loadImageCallback = function (img) {
+                loader._imageLoaded++;
+                loader.glTF.images[iid] = img;
+                loader._checkComplete();
+            };
+
+            if (json.images) {
+                for (iid in json.images) {
+                    loader._imageRequested++;
+                    _loadImage(loader.baseUri + '/' + json.images[iid].uri, loadImageCallback);
+                }
+            }
+
+
+            // load shaders
             var pid;
             var newProgram;
 
@@ -613,6 +636,13 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         xobj.send(null);
     }
 
+    function _loadImage(url, onload) {
+        var img = new Image();
+        img.src = url;
+        img.onload = function() {
+            onload(img);
+        };
+    }
 
 
     function _createShader(gl, source, type) {
