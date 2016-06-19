@@ -40,6 +40,8 @@ In development: has problem when loading large models.
 ## Overall
 
 * [ ] Refactor
+    * [ ] Use function handlers for branches
+    * [ ] Separate to multiple source files
 * [ ] Complete all states, types, etc.
 
 
