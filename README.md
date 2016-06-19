@@ -2,18 +2,23 @@
 [![Build Status](https://travis-ci.org/shrekshao/minimal-gltf-loader.svg?branch=master)](https://travis-ci.org/shrekshao/minimal-gltf-loader)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/shrekshao/minimal-gltf-loader/blob/master/LICENSE.md)
 
-A minimal JavaScript glTF Loader without need of 3D engines like Three.js. 
+A minimal JavaScript glTF Loader without need of support from 3D engines like Three.js. 
 
 ## Viewer Screenshot
 
 ![](img/viewer-screenshot.png)
+![](img/viewer-screenshot-2.png)
+
+:exclamation: In Development
 
 ## Features
 
 * [x] Geometry Loader
     * [x] Multi hirerachy support
 * [x] Material
-* [ ] Texture
+* [x] Texture
+    * [ ] Non-Power-Of-Two Texture for WebGL 1
+    * [ ] Separate Sampler for WebGL 2
 * [x] Shader
 * [ ] Animation
 * [ ] Skins
@@ -31,6 +36,13 @@ In development: has problem when loading large models.
 
 * [ ] WebGL 1 simple renderer
 * [ ] WebGL 2 simple renderer
+
+## Overall
+
+* [ ] Refactor
+    * [ ] Use function handlers for branches
+    * [ ] Separate to multiple source files
+* [ ] Complete all states, types, etc.
 
 
 ## Credits
