@@ -453,18 +453,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
 
             // load images
-            var iid;
+            
 
-            var loadImageCallback = function (img) {
+            var loadImageCallback = function (img, iid) {
                 loader._imageLoaded++;
                 loader.glTF.images[iid] = img;
                 loader._checkComplete();
             };
 
+            var iid;
+
             if (json.images) {
                 for (iid in json.images) {
                     loader._imageRequested++;
-                    _loadImage(loader.baseUri + json.images[iid].uri, loadImageCallback);
+                    _loadImage(loader.baseUri + json.images[iid].uri, iid, loadImageCallback);
                 }
             }
 
@@ -636,11 +638,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         xobj.send(null);
     }
 
-    function _loadImage(url, onload) {
+    function _loadImage(url, iid, onload) {
         var img = new Image();
         img.src = url;
         img.onload = function() {
-            onload(img);
+            onload(img, iid);
         };
     }
 
