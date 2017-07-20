@@ -173,6 +173,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.glTF.json = json;
         this.glTF.defaultScene = json.scene;
 
+        this.glTF.version = Number(json.asset.version);
+
         // Iterate through every scene
         if (json.scenes) {
             for (var sceneID in json.scenes) {
@@ -199,6 +201,47 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
+    glTFLoader.prototype._parseMesh = function(json, meshID, newScene, matrix) {
+        var newMesh = new Mesh();
+        newScene.meshes.push(newMesh);
+
+        var mesh = json.meshes[meshID];
+
+        newMesh.meshID = meshID;
+
+        // Iterate through primitives
+        var primitives = mesh.primitives;
+        var primitiveLen = primitives.length;
+
+        for (var p = 0; p < primitiveLen; ++p) {
+            var newPrimitive = new Primitive();
+            newMesh.primitives.push(newPrimitive);
+
+            var primitive = primitives[p];
+            
+            if (primitive.indices != undefined) {
+                this._parseIndices(json, primitive, newPrimitive);
+            }
+            
+            this._parseAttributes(json, primitive, newPrimitive, matrix);
+
+            // required
+            newPrimitive.material = json.materials[primitive.material];
+            
+            if (newPrimitive.material.technique) {
+                newPrimitive.technique = json.techniques[newPrimitive.material.technique];
+            } else {
+                // TODO: use default technique in glTF spec Appendix A
+            }
+                
+        }
+    }
+
+
+
+
+
+
     var translationVec3 = vec3.create();
     var rotationQuat = quat.create();
     var scaleVec3 = vec3.create();
@@ -223,11 +266,26 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         } else {
             // translation, rotation, scale (TRS)
             // TODO: these labels are optional
-            vec3.set(translationVec3, node.translation[0], node.translation[1], node.translation[2]);
-            quat.set(rotationQuat, node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]);
+            if (node.translation) {
+                vec3.set(translationVec3, node.translation[0], node.translation[1], node.translation[2]);
+            } else {
+                vec3.set(translationVec3, 0, 0, 0);
+            }
+            
+            if (node.rotation) {
+                quat.set(rotationQuat, node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]);
+            } else {
+                quat.set(rotationQuat, 0, 0, 0, 1);
+            }
+
+            if (node.scale) {
+                vec3.set(scaleVec3, node.scale[0], node.scale[1], node.scale[2]);
+            } else {
+                vec3.set(scaleVec3, 1, 1, 1);
+            }
+            
             mat4.fromRotationTranslation(TRMatrix, rotationQuat, translationVec3);
             mat4.multiply(curMatrix, curMatrix, TRMatrix);
-            vec3.set(scaleVec3, node.scale[0], node.scale[1], node.scale[2]);
             mat4.scale(curMatrix, curMatrix, scaleVec3);
         }
 
@@ -236,56 +294,29 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
             
-        // Iterate through every mesh within node
-        var meshes = node.meshes;
-        if(!!meshes) {
+        
+        if(node.meshes) {
+            // Iterate through every mesh within node 
+            var meshes = node.meshes;
             var meshLen = meshes.length;
             for (var m = 0; m < meshLen; ++m) {
-                var newMesh = new Mesh();
-                newScene.meshes.push(newMesh);
-
-                var meshName = meshes[m];
-                var mesh = json.meshes[meshName];
-
-                newMesh.meshID = meshName;
-
-                // Iterate through primitives
-                var primitives = mesh.primitives;
-                var primitiveLen = primitives.length;
-
-                for (var p = 0; p < primitiveLen; ++p) {
-                    var newPrimitive = new Primitive();
-                    newMesh.primitives.push(newPrimitive);
-
-                    var primitive = primitives[p];
-                    
-                    if (primitive.indices) {
-                        this._parseIndices(json, primitive, newPrimitive);
-                    }
-                    
-                    this._parseAttributes(json, primitive, newPrimitive, curMatrix);
-
-                    // required
-                    newPrimitive.material = json.materials[primitive.material];
-                    
-                    if (newPrimitive.material.technique) {
-                        newPrimitive.technique = json.techniques[newPrimitive.material.technique];
-                    } else {
-                        // TODO: use default technique in glTF spec Appendix A
-                    }
-                     
-                }
+                this._parseMesh(json, meshes[m], newScene, curMatrix);
             }
+        } else if (node.mesh !== undefined) {
+            this._parseMesh(json, node.mesh, newScene, curMatrix);
         }
 
 
         // Go through all the children recursively
         var children = node.children;
-        var childreLen = children.length;
-        for (var c = 0; c < childreLen; ++c) {
-            var childNodeID = children[c];
-            this._parseNode(json, childNodeID, newScene, curMatrix);
+        if (children) {
+            var childreLen = children.length;
+            for (var c = 0; c < childreLen; ++c) {
+                var childNodeID = children[c];
+                this._parseNode(json, childNodeID, newScene, curMatrix);
+            }
         }
+        
 
     };
 
@@ -338,7 +369,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 
                 var componentTypeByteSize = ComponentType2ByteSize[accessor.componentType];
                 
-                var stride = accessor.byteStride / componentTypeByteSize;
+                // !! TODO: if no bytestride, then it is separate buffer, not interleaved
+                var stride = (accessor.byteStride !== undefined) ? accessor.byteStride / componentTypeByteSize : 0;
                 var offset = accessor.byteOffset / componentTypeByteSize;
                 var count  = accessor.count;
 
