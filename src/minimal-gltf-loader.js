@@ -17,7 +17,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
     var Mesh = MinimalGLTFLoader.Mesh = function () {
-        this.meshID;     // mesh id name in glTF json meshes
+        this.meshID = -1;     // mesh id name in glTF json meshes
         this.primitives = [];
     };
 
@@ -252,7 +252,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
                 
         }
-    }
+    };
 
 
 

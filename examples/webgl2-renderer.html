@@ -312,12 +312,13 @@
                     mat4.copy(matrix, node.matrix);
                 }
 
-                
+                var i, len;
+
                 // draw cur node's mesh
                 if (node.mesh !== null) {
                     // drawMesh(glTF.meshes[node.mesh], matrix);
                     var mesh = glTF.meshes[node.mesh];
-                    for (var i = 0, len = mesh.primitives.length; i < len; i++) {
+                    for (i = 0, len = mesh.primitives.length; i < len; i++) {
                         // draw primitive
                         drawPrimitive(mesh.primitives[i], matrix);
                     }
