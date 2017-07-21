@@ -4,19 +4,16 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
-        // // not 1-1 to meshes in json file
-        // // each mesh with a different node hierarchy is a new instance
-        // this.meshes = [];
-        // //this.meshes = {};
-
-        this.nodes = [];    // root nodes of this scene
-        this.meshes = [];
+        this.nodes = [];    // root node id of this scene, reference to glTFModel.nodes
+        this.meshes = [];   // mesh id number, reference to glTFModel.meshes
     };
 
     // Node
     var Node = MinimalGLTFLoader.Node = function () {
         this.matrix = mat4.create();
-        this.meshIDs = [];
+        this.children = [];  // nodes
+        // this.meshIDs = [];
+        this.mesh = null;
     };
 
     var Mesh = MinimalGLTFLoader.Mesh = function () {
@@ -26,18 +23,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     var Primitive = MinimalGLTFLoader.Primitive = function () {
         this.mode = 4; // default: gl.TRIANGLES
-        
-        this.matrix = mat4.create();
 
-        this.indices = null;
+        this.indicesData = null;
         this.indicesComponentType = 5123;   // default: gl.UNSIGNED_SHORT
 
         // !!: assume vertex buffer is interleaved
         // see discussion https://github.com/KhronosGroup/glTF/issues/21
-        // !!: not any more in glTF 2
-        this.vertexBuffer = null;
-
-        this.vertexBufferSeparate = {};
+        // !!: not any more in glTF 2 ??
+        this.verticesData = null;
 
 
         // attribute info (stride, offset, etc)
@@ -48,6 +41,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.technique = null;
 
 
+        this.vertexArray = null;
 
         // // Program gl buffer name 
         // // ?? reconsider if it's suitable to put it here
@@ -60,18 +54,30 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     /**
      * 
      */
-    var glTFModel = MinimalGLTFLoader.glTFModel = function () {
-        this.defaultScene = '';
-        this.scenes = {};
+    var glTFModel = MinimalGLTFLoader.glTFModel = function (gltf) {
+        this.json = gltf;
+        this.defaultScene = gltf.scene;
 
-        // this.nodeMatrix = {};
+        this.version = Number(gltf.asset.version);
 
-        this.json = null;
+        if (gltf.scenes) {
+            this.scenes = new Array(gltf.scenes.length);   // store Scene object
+        }
 
-        this.shaders = {};
-        this.programs = {};
+        if (gltf.nodes) {
+            this.nodes = new Array(gltf.nodes.length);    // store Node object
+        }
 
-        this.images = {};
+        if (gltf.meshes) {
+            this.meshes = new Array(gltf.meshes.length);    // store mesh object
+        }
+
+        this.shaders = {};      //glTF 1.0, deprecated in 2.0 core
+        this.programs = {};     //glTF 1.0, deprecated in 2.0 core
+
+        if (gltf.images) {
+            this.images = new Array(gltf.images.length);
+        }
 
     };
 
@@ -181,14 +187,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     glTFLoader.prototype._parseGLTF = function (json) {
 
-        this.glTF.json = json;
-        this.glTF.defaultScene = json.scene;
-
-        this.glTF.version = Number(json.asset.version);
-
         // Iterate through every scene
         if (json.scenes) {
-            for (var sceneID in json.scenes) {
+            // for (var sceneID in json.scenes) {
+            for (var sceneID = 0, len = json.scenes.length; sceneID < len; sceneID ++) {
                 var newScene = new Scene();
                 this.glTF.scenes[sceneID] = newScene;
 
@@ -199,10 +201,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 // Iterate through every node within scene
                 for (var n = 0; n < nodeLen; ++n) {
                     var nodeID = nodes[n];
-                    //var node = json.nodes[nodeName];
 
                     // Traverse node
-                    this._parseNode(json, nodeID, newScene);
+                    this._parseNode(json, nodeID, newScene.nodes);
                 }
             }
         }
@@ -212,13 +213,18 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
-    glTFLoader.prototype._parseMesh = function(json, meshID, newScene, matrix) {
+    glTFLoader.prototype._parseMesh = function(json, meshID) {
+        if (this.glTF.meshes[meshID] !== undefined) {
+            // mesh is already loaded
+            return;
+        }
+
         var newMesh = new Mesh();
-        newScene.meshes.push(newMesh);
+        this.glTF.meshes[meshID] = newMesh;
 
         var mesh = json.meshes[meshID];
 
-        newMesh.meshID = meshID;
+        // newMesh.meshID = meshID;
 
         // Iterate through primitives
         var primitives = mesh.primitives;
@@ -234,7 +240,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 this._parseIndices(json, primitive, newPrimitive);
             }
             
-            this._parseAttributes(json, primitive, newPrimitive, matrix);
+            this._parseAttributes(json, primitive, newPrimitive);
 
             // required
             newPrimitive.material = json.materials[primitive.material];
@@ -256,25 +262,29 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var translationVec3 = vec3.create();
     var rotationQuat = quat.create();
     var scaleVec3 = vec3.create();
-    var TRMatrix = mat4.create();
+    var TRSMatrix = mat4.create();
     
-    glTFLoader.prototype._parseNode = function(json, nodeID, newScene, matrix) {
-        var node = json.nodes[nodeID];
-        // var newNode = new Node();
-
-        if (matrix === undefined) {
-            matrix = mat4.create();
+    glTFLoader.prototype._parseNode = function(json, nodeID, parentNodeIdsArray) {
+        if (this.glTF.nodes[nodeID] !== undefined) {
+            // node is already loaded
+            return;
         }
 
-        var curMatrix = mat4.create();
+        var node = json.nodes[nodeID];
+        var newNode = new Node();
+        this.glTF.nodes[nodeID] = newNode;
+
+        parentNodeIdsArray.push(nodeID);
+
+        // var curMatrix = mat4.create();
+        var curMatrix = newNode.matrix;
         
         if (node.hasOwnProperty('matrix')) {
             // matrix
             for(var i = 0; i < 16; ++i) {
                 curMatrix[i] = node.matrix[i];
             }
-            mat4.multiply(curMatrix, matrix, curMatrix);
-            // mat4.multiply(curMatrix, curMatrix, matrix);
+            // mat4.multiply(curMatrix, matrix, curMatrix);
         } else {
             // translation, rotation, scale (TRS)
             // TODO: these labels are optional
@@ -296,11 +306,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 vec3.set(scaleVec3, 1, 1, 1);
             }
             
-            mat4.fromRotationTranslation(TRMatrix, rotationQuat, translationVec3);
-            // mat4.multiply(curMatrix, curMatrix, TRMatrix);
-            // mat4.scale(curMatrix, curMatrix, scaleVec3);
-            mat4.multiply(curMatrix, matrix, TRMatrix);
-            mat4.scale(curMatrix, curMatrix, scaleVec3);
+            mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
+            mat4.scale(curMatrix, TRSMatrix, scaleVec3);
+            // mat4.multiply(curMatrix, matrix, curMatrix);
+            
         }
 
         // store node matrix
@@ -309,15 +318,23 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
             
         
-        if(node.meshes) {
-            // Iterate through every mesh within node 
-            var meshes = node.meshes;
-            var meshLen = meshes.length;
-            for (var m = 0; m < meshLen; ++m) {
-                this._parseMesh(json, meshes[m], newScene, curMatrix);
-            }
-        } else if (node.mesh !== undefined) {
-            this._parseMesh(json, node.mesh, newScene, curMatrix);
+        // if(node.meshes) {
+        //     // Iterate through every mesh within node 
+        //     newNode.meshes = node.meshes;
+        //     var meshes = node.meshes;
+        //     var meshLen = meshes.length;
+        //     for (var m = 0; m < meshLen; ++m) {
+        //         this._parseMesh(json, meshes[m]);
+        //     }
+        // } 
+        // else if (node.mesh !== undefined) {
+        if (node.mesh !== undefined) {
+            // !! each node contains only one mesh in glTF2
+            // only this branch is valid in glTF2
+
+            // newNode.meshes.push(node.mesh);
+            newNode.mesh = node.mesh;
+            this._parseMesh(json, node.mesh);
         }
 
 
@@ -327,7 +344,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             var childreLen = children.length;
             for (var c = 0; c < childreLen; ++c) {
                 var childNodeID = children[c];
-                this._parseNode(json, childNodeID, newScene, curMatrix);
+                this._parseNode(json, childNodeID, newNode.children);
             }
         }
         
@@ -345,7 +362,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         var loader = this;
         this._getBufferViewData(json, accessor.bufferView, function(bufferViewData) {
-            newPrimitive.indices = _getAccessorData(bufferViewData, accessor);
+            newPrimitive.indicesData = _getAccessorData(bufferViewData, accessor);
             loader._checkComplete();
         });
     };
@@ -356,7 +373,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     //var tmpVec4 = vec4.create();
     //var inverseTransposeMatrix = mat4.create();
 
-    glTFLoader.prototype._parseAttributes = function(json, primitive, newPrimitive, matrix) {
+    glTFLoader.prototype._parseAttributes = function(json, primitive, newPrimitive) {
         // !! Assume interleaved vertex attributes
         // i.e., all attributes share one bufferView
 
@@ -370,7 +387,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         var loader = this;
 
         this._getBufferViewData(json, vertexBufferViewID, function(bufferViewData) {
-            var data = newPrimitive.vertexBuffer = _arrayBuffer2TypedArray(
+            var data = newPrimitive.verticesData = _arrayBuffer2TypedArray(
                     bufferViewData, 
                     0, 
                     bufferView.byteLength / ComponentType2ByteSize[firstAccessor.componentType],
@@ -424,7 +441,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
                 // local transform matrix
 
-                mat4.copy(newPrimitive.matrix, matrix);
+                // mat4.copy(newPrimitive.matrix, matrix);
                 
                 
 
@@ -461,7 +478,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         };
 
         
-        this.glTF = new glTFModel();
+        
 
         this.baseUri = _getBaseUri(uri);
 
@@ -470,6 +487,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         _loadJSON(uri, function (response) {
             // Parse JSON string into object
             var json = JSON.parse(response);
+
+            loader.glTF = new glTFModel(json);
 
             var bid;
 
