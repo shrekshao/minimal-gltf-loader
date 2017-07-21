@@ -18,7 +18,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.matrix = mat4.create();
         this.children = [];  // nodes
         // this.meshIDs = [];
-        this.mesh = 0;
+        this.mesh = null;
     };
 
     var Mesh = MinimalGLTFLoader.Mesh = function () {

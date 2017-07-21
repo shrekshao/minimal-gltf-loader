@@ -241,9 +241,7 @@
                 nodeMatrix[i] = mat4.create();
             }
 
-            // var primitiveCount = 0;
             function drawPrimitive(primitive, matrix) {
-                // primitiveCount++;
                 mat4.multiply(localMV, modelView, matrix);
                 mat4.multiply(localMVP, perspective, localMV);
 
@@ -264,7 +262,7 @@
 
             // function drawMesh(mesh, matrix) {
             // }
-            var identityMatrix = mat4.create();
+            
             function drawNode(node, nodeID, parentModelMatrix) {
                 var matrix = nodeMatrix[nodeID];
                 
@@ -277,13 +275,15 @@
 
                 
                 // draw cur node's mesh
-                // drawMesh(glTF.meshes[node.mesh], matrix);
-                var mesh = glTF.meshes[node.mesh];
-                for (var i = 0, len = mesh.primitives.length; i < len; i++) {
-                    // draw primitive
-                    drawPrimitive(mesh.primitives[i], matrix);
-                    // drawPrimitive(mesh.primitives[i], identityMatrix);
+                if (node.mesh !== null) {
+                    // drawMesh(glTF.meshes[node.mesh], matrix);
+                    var mesh = glTF.meshes[node.mesh];
+                    for (var i = 0, len = mesh.primitives.length; i < len; i++) {
+                        // draw primitive
+                        drawPrimitive(mesh.primitives[i], matrix);
+                    }
                 }
+                
 
                 // draw children
                 
@@ -313,11 +313,9 @@
 
                 gl.useProgram(program);
                 
-                // primitiveCount = 0;
                 for (i = 0, lenNodes = curScene.nodes.length; i < lenNodes; i++) {
                     drawNode( glTF.nodes[curScene.nodes[i]], curScene.nodes[i] );
                 }
-                // console.log(primitiveCount);
 
                 
                 // for (mid = 0, lenMeshes = curScene.meshes.length; mid < lenMeshes; mid++) {
