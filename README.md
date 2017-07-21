@@ -15,8 +15,7 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 
 * [x] Geometry Loader
 * [x] Image Loader
-* [x] Texture
-* [x] ~~Shader~~ (not part of the core in glTF 2)
+* [x] ~~Shader Loader~~ (not part of the core of glTF 2.0)
 * [ ] Animation
 * [ ] Skins
 
