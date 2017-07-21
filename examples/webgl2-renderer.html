@@ -17,7 +17,7 @@
         An example viewer of the model loaded by Minimal-glTF-Loader
     </p>
 
-    <script id="vs-smooth" type="x-shader/x-vertex">
+    <script id="vs-normal" type="x-shader/x-vertex">
         #version 300 es
         #define POSITION_LOCATION 0
         #define NORMAL_LOCATION 1
@@ -25,8 +25,8 @@
         precision highp float;
         precision highp int;
 
-        uniform mat4 mvp;
-        uniform mat4 mvNormal;
+        uniform mat4 u_MVP;
+        uniform mat4 u_MVNormal;
 
         layout(location = POSITION_LOCATION) in vec3 position;
         layout(location = NORMAL_LOCATION) in vec3 normal;
@@ -35,12 +35,12 @@
 
         void main()
         {
-            v_normal = normalize((mvNormal * vec4(normal, 0)).xyz);
-            gl_Position = mvp * vec4(position, 1.0) ;
+            v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);
+            gl_Position = u_MVP * vec4(position, 1.0) ;
         }
     </script>
 
-    <script id="fs-smooth" type="x-shader/x-fragment">
+    <script id="fs-normal" type="x-shader/x-fragment">
         #version 300 es
         #define FRAG_COLOR_LOCATION 0
 
@@ -55,6 +55,26 @@
         {
             color = vec4(v_normal, 1.0);
             //color = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    </script>
+
+    <script id="fs-base-color" type="x-shader/x-fragment">
+        #version 300 es
+        #define FRAG_COLOR_LOCATION 0
+
+        precision highp float;
+        precision highp int;
+
+        uniform vec4 u_baseColorFactor;
+
+        in vec3 v_normal;
+
+        layout(location = FRAG_COLOR_LOCATION) out vec4 color;
+
+        void main()
+        {
+            float intensity = dot(v_normal, vec3(0.0, 0.0, 1.0));
+            color = u_baseColorFactor * intensity; 
         }
     </script>
 
@@ -119,6 +139,8 @@
         // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
         var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -126,10 +148,15 @@
 
             var curScene = glTF.scenes[glTF.defaultScene];
             
-            // -- Initialize program
-            var program = createProgram(gl, getShaderSource('vs-smooth'), getShaderSource('fs-smooth'));
-            var uniformMvpLocation = gl.getUniformLocation(program, "mvp");
-            var uniformMvNormalLocation = gl.getUniformLocation(program, "mvNormal");
+            // // -- Initialize program
+            // var program = createProgram(gl, getShaderSource('vs-normal'), getShaderSource('fs-normal'));
+            // var uniformMvpLocation = gl.getUniformLocation(program, "u_MVP");
+            // var uniformMvNormalLocation = gl.getUniformLocation(program, "u_MVNormal");
+
+            var program = createProgram(gl, getShaderSource('vs-normal'), getShaderSource('fs-base-color'));
+            var uniformMvpLocation = gl.getUniformLocation(program, "u_MVP");
+            var uniformMvNormalLocation = gl.getUniformLocation(program, "u_MVNormal");
+            var uniformBaseColorFactorLocation = gl.getUniformLocation(program, "u_baseColorFactor");
 
             // -- Initialize vertex array
             var POSITION_LOCATION = 0; // set with GLSL layout qualifier
@@ -241,6 +268,7 @@
                 nodeMatrix[i] = mat4.create();
             }
 
+            var defaultColor = [1.0, 1.0, 1.0, 1.0];
             function drawPrimitive(primitive, matrix) {
                 mat4.multiply(localMV, modelView, matrix);
                 mat4.multiply(localMVP, perspective, localMV);
@@ -250,6 +278,17 @@
 
                 gl.uniformMatrix4fv(uniformMvpLocation, false, localMVP);
                 gl.uniformMatrix4fv(uniformMvNormalLocation, false, localMVNormal);
+
+                var baseColor = defaultColor;
+                if (primitive.material) {
+                    if (primitive.material.pbrMetallicRoughness !== undefined) {
+                        if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
+                            baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
+                        }
+                    }
+                }
+
+                gl.uniform4fv(uniformBaseColorFactorLocation, baseColor);
 
                 // gl.bindVertexArray(vertexArrayMaps[mid][i]);
                 gl.bindVertexArray(primitive.vertexArray);
@@ -316,41 +355,6 @@
                 for (i = 0, lenNodes = curScene.nodes.length; i < lenNodes; i++) {
                     drawNode( glTF.nodes[curScene.nodes[i]], curScene.nodes[i] );
                 }
-
-                
-                // for (mid = 0, lenMeshes = curScene.meshes.length; mid < lenMeshes; mid++) {
-                //     mesh = curScene.meshes[mid];
-
-                //     // if (mid !== 0) {
-                //     // if (mid < 34) {
-                //     // if (mid !== testNodeId) {
-                //     //     continue;
-                //     // }
-
-                //     for (i = 0, len = mesh.primitives.length; i < len; ++i) {
-                //         primitive = mesh.primitives[i];
-
-                //         mat4.multiply(localMV, modelView, primitive.matrix);
-                //         //mat4.copy(localMV, modelView);
-                //         mat4.multiply(localMVP, perspective, localMV);
-
-                //         mat4.invert(localMVNormal, localMV);
-                //         mat4.transpose(localMVNormal, localMVNormal);
-
-                //         gl.uniformMatrix4fv(uniformMvpLocation, false, localMVP);
-                //         gl.uniformMatrix4fv(uniformMvNormalLocation, false, localMVNormal);
-
-                //         // gl.bindVertexArray(vertexArrayMaps[mid][i]);
-                //         gl.bindVertexArray(primitive.vertexArray);
-
-                //         // TODO: when no indices, do drawArrays
-                //         gl.drawElements(primitive.mode, primitive.indices.length, primitive.indicesComponentType, 0);
-
-                //         gl.bindVertexArray(null);
-                //     }
-                // }
-
-                
 
                 requestAnimationFrame(render);
             })();

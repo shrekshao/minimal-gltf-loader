@@ -4,13 +4,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
-        // // not 1-1 to meshes in json file
-        // // each mesh with a different node hierarchy is a new instance
-        // this.meshes = [];
-        // //this.meshes = {};
-
-        this.nodes = [];    // root node id of this scene
-        this.meshes = [];   // mesh id number, reference to glTFModel Root model
+        this.nodes = [];    // root node id of this scene, reference to glTFModel.nodes
+        this.meshes = [];   // mesh id number, reference to glTFModel.meshes
     };
 
     // Node
@@ -219,6 +214,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     glTFLoader.prototype._parseMesh = function(json, meshID) {
+        if (this.glTF.meshes[meshID] !== undefined) {
+            // mesh is already loaded
+            return;
+        }
+
         var newMesh = new Mesh();
         this.glTF.meshes[meshID] = newMesh;
 
@@ -265,6 +265,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var TRSMatrix = mat4.create();
     
     glTFLoader.prototype._parseNode = function(json, nodeID, parentNodeIdsArray) {
+        if (this.glTF.nodes[nodeID] !== undefined) {
+            // node is already loaded
+            return;
+        }
+
         var node = json.nodes[nodeID];
         var newNode = new Node();
         this.glTF.nodes[nodeID] = newNode;
