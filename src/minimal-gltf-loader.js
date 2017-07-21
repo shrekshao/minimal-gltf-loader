@@ -4,16 +4,23 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
-        // not 1-1 to meshes in json file
-        // each mesh with a different node hierarchy is a new instance
+        // // not 1-1 to meshes in json file
+        // // each mesh with a different node hierarchy is a new instance
+        // this.meshes = [];
+        // //this.meshes = {};
+
+        this.nodes = [];    // root nodes of this scene
         this.meshes = [];
-        //this.meshes = {};
     };
 
     // Node
+    var Node = MinimalGLTFLoader.Node = function () {
+        this.matrix = mat4.create();
+        this.meshIDs = [];
+    };
 
     var Mesh = MinimalGLTFLoader.Mesh = function () {
-        this.meshID = '';     // mesh id name in glTF json meshes
+        this.meshID;     // mesh id name in glTF json meshes
         this.primitives = [];
     };
 
@@ -27,7 +34,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         // !!: assume vertex buffer is interleaved
         // see discussion https://github.com/KhronosGroup/glTF/issues/21
+        // !!: not any more in glTF 2
         this.vertexBuffer = null;
+
+        this.vertexBufferSeparate = {};
+
 
         // attribute info (stride, offset, etc)
         this.attributes = {};
@@ -53,7 +64,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.defaultScene = '';
         this.scenes = {};
 
-        this.nodeMatrix = {};
+        // this.nodeMatrix = {};
 
         this.json = null;
 
@@ -249,6 +260,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     
     glTFLoader.prototype._parseNode = function(json, nodeID, newScene, matrix) {
         var node = json.nodes[nodeID];
+        // var newNode = new Node();
 
         if (matrix === undefined) {
             matrix = mat4.create();
@@ -262,7 +274,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 curMatrix[i] = node.matrix[i];
             }
             mat4.multiply(curMatrix, matrix, curMatrix);
-            //mat4.multiply(curMatrix, curMatrix, matrix);
+            // mat4.multiply(curMatrix, curMatrix, matrix);
         } else {
             // translation, rotation, scale (TRS)
             // TODO: these labels are optional
@@ -285,12 +297,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
             
             mat4.fromRotationTranslation(TRMatrix, rotationQuat, translationVec3);
-            mat4.multiply(curMatrix, curMatrix, TRMatrix);
+            // mat4.multiply(curMatrix, curMatrix, TRMatrix);
+            // mat4.scale(curMatrix, curMatrix, scaleVec3);
+            mat4.multiply(curMatrix, matrix, TRMatrix);
             mat4.scale(curMatrix, curMatrix, scaleVec3);
         }
 
         // store node matrix
-        this.glTF.nodeMatrix[nodeID] = curMatrix;
+        // this.glTF.nodeMatrix[nodeID] = curMatrix;
 
 
             

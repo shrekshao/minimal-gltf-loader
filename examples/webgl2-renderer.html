@@ -60,6 +60,7 @@
 
 
     <script>
+    var testNodeId = 0;
     (function()  {
         'use strict';
 
@@ -107,7 +108,8 @@
 
         // -- Load glTF then render
         // var gltfUrl = '../glTFs/duck/duck.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/CesiumMilkTruck/CesiumMilkTruck.gltf'
         // var gltfUrl = '../glTFs/2_cylinder_engine/2_cylinder_engine.gltf';
         // var gltfUrl = '../glTFs/Reciprocating_Saw/Reciprocating_Saw.gltf';
@@ -129,7 +131,8 @@
             var POSITION_LOCATION = 0; // set with GLSL layout qualifier
             var NORMAL_LOCATION = 1; // set with GLSL layout qualifier
 
-            var vertexArrayMaps = {};
+            // var vertexArrayMaps = {};
+            var vertexArrayMaps = [];
 
             // var in loop
             var mesh;
@@ -138,9 +141,10 @@
             var indicesBuffer;
             var vertexArray;
 
-            var i,len;
+            var mid, lenMeshes;
+            var i, len;
 
-            for (var mid in curScene.meshes) {
+            for (mid = 0, lenMeshes = curScene.meshes.length; mid < lenMeshes; mid++) {
                 mesh = curScene.meshes[mid];
                 vertexArrayMaps[mid] = [];
 
@@ -243,9 +247,16 @@
 
                 gl.useProgram(program);
                 
-
-                for (var mid in curScene.meshes) {
+                // meshes is usually a dict in glTF 1?
+                // but an array in glTF 2?
+                for (mid = 0, lenMeshes = curScene.meshes.length; mid < lenMeshes; mid++) {
                     mesh = curScene.meshes[mid];
+
+                    // if (mid !== 0) {
+                    // if (mid < 34) {
+                    // if (mid !== testNodeId) {
+                    //     continue;
+                    // }
 
                     for (i = 0, len = mesh.primitives.length; i < len; ++i) {
                         primitive = mesh.primitives[i];
