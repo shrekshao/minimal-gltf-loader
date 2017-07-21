@@ -4,26 +4,21 @@
 
 A minimal JavaScript glTF Loader without need of support from 3D engines like Three.js. 
 
+(:exclamation: In development, newly migrate to glTF 2, not backward compatible for now)
+
 ## Viewer Screenshot
 
-![](img/viewer-screenshot.png)
-![](img/viewer-screenshot-2.png)
+![](img/viewer-screenshot-buggy.png)
 
-:exclamation: In Development
 
 ## Features
 
 * [x] Geometry Loader
-    * [x] Multi hirerachy support
-* [x] Material
+* [x] Image Loader
 * [x] Texture
-    * [ ] Non-Power-Of-Two Texture for WebGL 1
-    * [ ] Separate Sampler for WebGL 2
-* [x] Shader
+* [x] ~~Shader~~ (not part of the core in glTF 2)
 * [ ] Animation
 * [ ] Skins
-
-In development: has problem when loading large models.
 
 ## Formats
 
@@ -34,18 +29,14 @@ In development: has problem when loading large models.
 
 ## Examples
 
-* [ ] WebGL 1 simple renderer
-* [ ] WebGL 2 simple renderer
-
-## Overall
-
-* [ ] Refactor
-    * [ ] Use function handlers for branches
-    * [ ] Separate to multiple source files
-* [ ] Complete all states, types, etc.
+* [x] WebGL 2 simple renderer
+    * [x] baseColor
+    * [ ] PBR
+    * [ ] Animation
 
 
 ## Credits
 
+* [glTF sample Model](https://github.com/KhronosGroup/glTF-Sample-Models)
 * Great thanks to Trung Le ([@trungtle](https://github.com/trungtle)) and Patrick Cozzi ([@pjcozzi](https://github.com/pjcozzi)) for contributing and advising. 
 * gl-Matrix by Brandon Jones ([@toji](https://github.com/toji)) and Colin MacKenzie IV ([@sinisterchipmunk](https://github.com/sinisterchipmunk))
