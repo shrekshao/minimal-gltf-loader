@@ -8,7 +8,51 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.meshes = [];   // mesh id number, reference to glTFModel.meshes
     };
 
-    // Node
+
+
+    var Accessor = MinimalGLTFLoader.Accessor = function (a, bufferViewObject) {
+        this.bufferView = bufferViewObject;
+        this.componentType = a.componentType;   // required
+        this.byteOffset = a.byteOffset !== undefined ? a.byteOffset : 0;
+        this.byteStride = bufferViewObject.byteStride;
+        this.normalized = a.normalized !== undefined ? a.normalized : false;
+        this.count = a.count;   // required
+        this.type = a.type;     // required
+        this.size = Type2NumOfComponent[this.type];
+    };
+
+    // Accessor.prototype.setup = function() {
+    //     gl.vertexAttribPointer(
+    //         PROGRAM_ATTRIBUTE_LOCATION,
+    //         accessor.size,
+    //         accessor.componentType,
+    //         accessor.normalized,
+    //         accessor.byteStride,
+    //         accessor.byteOffset
+    //         );
+    // }
+
+
+
+    var BufferView = MinimalGLTFLoader.BufferView = function(bf, bufferData) {
+        this.byteLength = bf.byteLength;    //required
+        this.byteOffset = bf.byteOffset !== undefined ? bf.byteOffset : 0;
+        this.byteStride = bf.byteStride !== undefined ? bf.byteStride : 0;
+        this.target = bf.target !== undefined ? bf.target : null;
+
+        this.data = bufferData.slice(this.byteOffset, this.byteOffset + this.byteLength);
+
+        this.buffer = null;
+
+        // if (gl) {
+        //     this.buffer = gl.createBuffer();
+        // }
+
+        // //temp
+        // this.json = bf;
+    };
+
+
     var Node = MinimalGLTFLoader.Node = function () {
         this.matrix = mat4.create();
         this.children = [];  // nodes
@@ -21,32 +65,33 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.primitives = [];
     };
 
-    var Primitive = MinimalGLTFLoader.Primitive = function () {
-        this.mode = 4; // default: gl.TRIANGLES
+    var Primitive = MinimalGLTFLoader.Primitive = function (json, p) {
+        // <attribute name, accessor id>, required
+        this.attributes = p.attributes;
 
-        this.indicesData = null;
-        this.indicesComponentType = 5123;   // default: gl.UNSIGNED_SHORT
+        this.indices = p.indices !== undefined ? p.indices : null;  // accessor id
 
-        // !!: assume vertex buffer is interleaved
-        // see discussion https://github.com/KhronosGroup/glTF/issues/21
-        // !!: not any more in glTF 2 ??
-        this.verticesData = null;
+        // tmp
+        this.indicesComponentType = json.accessors[this.indices].componentType;
+        this.indicesLength = json.accessors[this.indices].count;
+        this.indicesOffset = (json.accessors[this.indices].byteOffset || 0);
+
+        // temp
+        this.material = p.material !== undefined ? json.materials[p.material] : null;
+
+        this.mode = p.mode !== undefined ? p.mode : 4; // default: gl.TRIANGLES
+
+        
+
+        // morph related
+        this.targets = p.targets;
 
 
-        // attribute info (stride, offset, etc)
-        this.attributes = {};
-
-        // cur glTF spec supports only one material per primitive
-        this.material = null;
-        this.technique = null;
-
-
-        this.vertexArray = null;
-
-        // // Program gl buffer name 
-        // // ?? reconsider if it's suitable to put it here
-        // this.indicesWebGLBufferName = null;
-        // this.vertexWebGLBufferName = null;
+        // gl run time related
+        this.vertexArray = null;    //vao
+        
+        this.vertexBuffer = null;
+        this.indexBuffer = null;
 
     };
 
@@ -59,6 +104,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.defaultScene = gltf.scene;
 
         this.version = Number(gltf.asset.version);
+
+        if (gltf.accessors) {
+            this.accessors = new Array(gltf.accessors.length);
+        }
+
+        if (gltf.bufferViews) {
+            this.bufferViews = new Array(gltf.bufferViews.length);
+        }
 
         if (gltf.scenes) {
             this.scenes = new Array(gltf.scenes.length);   // store Scene object
@@ -86,7 +139,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var gl;
 
     var glTFLoader = MinimalGLTFLoader.glTFLoader = function (glContext) {
-        gl = glContext;
+        gl = glContext !== undefined ? glContext : null;
         this._init();
         this.glTF = null;
     };
@@ -100,8 +153,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this._buffers = {};
         this._bufferTasks = {};
 
-        // ?? Move to glTFModel to avoid collected by GC ?? 
-        this._bufferViews = {};
+
 
         this._shaderRequested = 0;
         this._shaderLoaded = 0;
@@ -118,16 +170,19 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     glTFLoader.prototype._getBufferViewData = function(json, bufferViewID, callback) {
-        var bufferViewData = this._bufferViews[bufferViewID];
-        if(!bufferViewData) {
+        // var bufferViewData = this._bufferViews[bufferViewID];
+        var bufferViewObject = this.glTF.bufferViews[bufferViewID];
+        if(bufferViewObject === undefined) {
             // load bufferView for the first time
+
             var bufferView = json.bufferViews[bufferViewID];
             var bufferData = this._buffers[bufferView.buffer];
             if (bufferData) {
                 // buffer already loaded
-                //console.log("dependent buffer ready, create bufferView" + bufferViewID);
-                this._bufferViews[bufferViewID] = bufferData.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
-                callback(bufferViewData);
+                console.log('dependent buffer data ready (instant), create bufferView ' + bufferViewID);
+                this.glTF.bufferViews[bufferViewID] = bufferViewObject = new BufferView( bufferView, bufferData );
+                callback(bufferViewObject);
+                // this._checkComplete();
             } else {
                 // buffer not yet loaded
                 // add pending task to _bufferTasks
@@ -142,13 +197,19 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 bufferTask.push(function(newBufferData) {
                     // share same bufferView
                     // hierarchy needs to be post processed in the renderer
-                    var curBufferViewData = loader._bufferViews[bufferViewID];
-                    if (!curBufferViewData) {
-                        console.log('create new BufferView Data for ' + bufferViewID);
-                        curBufferViewData = loader._bufferViews[bufferViewID] = newBufferData.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
-                    }
+                    
                     loader._finishedPendingTasks++;
-                    callback(curBufferViewData);
+
+                    bufferViewObject = loader.glTF.bufferViews[bufferViewID];
+                    if (bufferViewObject === undefined) {
+                        console.log('create new BufferView Data for ' + bufferViewID);
+                        bufferViewObject = loader.glTF.bufferViews[bufferViewID] = new BufferView( bufferView, newBufferData );
+                    } else {
+                        console.log('dependent buffer data ready (queued), create bufferView ' + bufferViewID);
+                    }
+                    
+                    callback(bufferViewObject);
+                    loader._checkComplete();
 
                     // // create new bufferView for each mesh access with a different hierarchy
                     // // hierarchy transformation will be prepared in this way
@@ -163,7 +224,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // no need to load buffer from file
             // use cached ones
             //console.log("use cached bufferView " + bufferViewID);
-            callback(bufferViewData);
+            callback(bufferViewObject);
         }
     };
     
@@ -172,7 +233,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     glTFLoader.prototype._checkComplete = function () {
         if (this._bufferRequested == this._bufferLoaded && 
-            this._shaderRequested == this._shaderLoaded && 
+            // this._shaderRequested == this._shaderLoaded && 
             this._imageRequested == this._imageLoaded 
             // && other resources finish loading
             ) {
@@ -186,11 +247,39 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     glTFLoader.prototype._parseGLTF = function (json) {
+        var i, len;
+        var a;  // acccessor json
+
+        // var callbackAccessor = (function(bufferView) {
+        //     this.glTF.accessors[i] = new Accessor(a, bufferView);
+        // }).bind(this);
+        var loader = this;
+
+        // load all accessors (and their dependent bufferView)
+        if (json.accessors) {
+            for (i = 0, len = json.accessors.length; i < len; i++) {
+                a = json.accessors[i];
+                if (a.bufferView !== undefined) {
+                    // this._getBufferViewData(json, a.bufferView, callbackAccessor);
+                    this._getBufferViewData(json, a.bufferView, 
+                        (function(){
+                            var accessor = json.accessors[i];
+                            var ii = i;
+                            return function(bufferView) {
+                                
+                                loader.glTF.accessors[ii] = new Accessor(accessor, bufferView);
+                            };
+                        })()
+                    );
+                }
+            }
+        }
+
 
         // Iterate through every scene
         if (json.scenes) {
             // for (var sceneID in json.scenes) {
-            for (var sceneID = 0, len = json.scenes.length; sceneID < len; sceneID ++) {
+            for (var sceneID = 0, lenS = json.scenes.length; sceneID < lenS; sceneID ++) {
                 var newScene = new Scene();
                 this.glTF.scenes[sceneID] = newScene;
 
@@ -229,28 +318,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // Iterate through primitives
         var primitives = mesh.primitives;
         var primitiveLen = primitives.length;
+        var primitive;  // primitive json
 
         for (var p = 0; p < primitiveLen; ++p) {
-            var newPrimitive = new Primitive();
-            newMesh.primitives.push(newPrimitive);
-
-            var primitive = primitives[p];
-            
-            if (primitive.indices != undefined) {
-                this._parseIndices(json, primitive, newPrimitive);
-            }
-            
-            this._parseAttributes(json, primitive, newPrimitive);
-
-            // required
-            newPrimitive.material = json.materials[primitive.material];
-            
-            if (newPrimitive.material.technique) {
-                newPrimitive.technique = json.techniques[newPrimitive.material.technique];
-            } else {
-                // TODO: use default technique in glTF spec Appendix A
-            }
-                
+            primitive = primitives[p];
+            newMesh.primitives.push(new Primitive(json, primitive));
         }
     };
 
@@ -352,115 +424,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
-    glTFLoader.prototype._parseIndices = function(json, primitive, newPrimitive) {
-
-        var accessorName = primitive.indices;
-        var accessor = json.accessors[accessorName];
-
-        newPrimitive.mode = primitive.mode || 4;
-        newPrimitive.indicesComponentType = accessor.componentType;
-
-        var loader = this;
-        this._getBufferViewData(json, accessor.bufferView, function(bufferViewData) {
-            newPrimitive.indicesData = _getAccessorData(bufferViewData, accessor);
-            loader._checkComplete();
-        });
-    };
-
-
-
-
-    //var tmpVec4 = vec4.create();
-    //var inverseTransposeMatrix = mat4.create();
-
-    glTFLoader.prototype._parseAttributes = function(json, primitive, newPrimitive) {
-        // !! Assume interleaved vertex attributes
-        // i.e., all attributes share one bufferView
-
-
-        // vertex buffer processing
-        var firstSemantic = Object.keys(primitive.attributes)[0];
-        var firstAccessor = json.accessors[primitive.attributes[firstSemantic]];
-        var vertexBufferViewID = firstAccessor.bufferView;
-        var bufferView = json.bufferViews[vertexBufferViewID];
-
-        var loader = this;
-
-        this._getBufferViewData(json, vertexBufferViewID, function(bufferViewData) {
-            var data = newPrimitive.verticesData = _arrayBuffer2TypedArray(
-                    bufferViewData, 
-                    0, 
-                    bufferView.byteLength / ComponentType2ByteSize[firstAccessor.componentType],
-                    firstAccessor.componentType
-                    );
-            
-            for (var attributeName in primitive.attributes) {
-                var accessorName = primitive.attributes[attributeName];
-                var accessor = json.accessors[accessorName];
-                
-                var componentTypeByteSize = ComponentType2ByteSize[accessor.componentType];
-                
-                // !! TODO: if no bytestride, then it is separate buffer, not interleaved
-                var stride = (accessor.byteStride !== undefined) ? accessor.byteStride / componentTypeByteSize : 0;
-                var offset = accessor.byteOffset / componentTypeByteSize;
-                var count  = accessor.count;
-
-                // // Matrix transformation
-                // if (attributeName === 'POSITION') {
-                //     for (var i = 0; i < count; ++i) {
-                //         // TODO: add vec2 and other(needed?) support 
-                //         vec4.set(tmpVec4, data[stride * i + offset]
-                //                         , data[stride * i + offset + 1]
-                //                         , data[stride * i + offset + 2]
-                //                         , 1);
-                //         vec4.transformMat4(tmpVec4, tmpVec4, matrix);
-                //         vec4.scale(tmpVec4, tmpVec4, 1 / tmpVec4[3]);
-                //         data[stride * i + offset] = tmpVec4[0];
-                //         data[stride * i + offset + 1] = tmpVec4[1];
-                //         data[stride * i + offset + 2] = tmpVec4[2];
-                //     }
-                // } 
-                // else if (attributeName === 'NORMAL') {
-                //     mat4.invert(inverseTransposeMatrix, matrix);
-                //     mat4.transpose(inverseTransposeMatrix, inverseTransposeMatrix);                    
-
-                //     for (var i = 0; i < count; ++i) {
-                //         // @todo: add vec2 and other(needed?) support
-                //         vec4.set(tmpVec4, data[stride * i + offset]
-                //                         , data[stride * i + offset + 1]
-                //                         , data[stride * i + offset + 2]
-                //                         , 0);
-                //         vec4.transformMat4(tmpVec4, tmpVec4, inverseTransposeMatrix);
-                //         vec4.normalize(tmpVec4, tmpVec4);
-                //         data[stride * i + offset] = tmpVec4[0];
-                //         data[stride * i + offset + 1] = tmpVec4[1];
-                //         data[stride * i + offset + 2] = tmpVec4[2];
-                //     }
-                // }
-
-
-                // local transform matrix
-
-                // mat4.copy(newPrimitive.matrix, matrix);
-                
-                
-
-                // for vertexAttribPointer
-                newPrimitive.attributes[attributeName] = {
-                    //GLuint program location,
-                    size: Type2NumOfComponent[accessor.type],
-                    type: accessor.componentType,
-                    //GLboolean normalized
-                    stride: accessor.byteStride,
-                    offset: accessor.byteOffset
-                };
-
-            }
-
-            loader._checkComplete();
-        });
-
-    };
 
     /**
      * load a glTF model
@@ -536,43 +499,43 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
 
 
-            // load shaders
-            var pid;
-            var newProgram;
+            // // load shaders
+            // var pid;
+            // var newProgram;
 
-            var loadVertexShaderFileCallback = function (resource) {
-                loader._shaderLoaded++;
-                newProgram.vertexShader = resource;
-                if (newProgram.fragmentShader) {
-                    // create Program
-                    newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
-                    loader._checkComplete();
-                }
-            };
-            var loadFragmentShaderFileCallback = function (resource) {
-                loader._shaderLoaded++;
-                newProgram.fragmentShader = resource;
-                if (newProgram.vertexShader) {
-                    // create Program
-                    newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
-                    loader._checkComplete();
-                }
-            };
+            // var loadVertexShaderFileCallback = function (resource) {
+            //     loader._shaderLoaded++;
+            //     newProgram.vertexShader = resource;
+            //     if (newProgram.fragmentShader) {
+            //         // create Program
+            //         newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
+            //         loader._checkComplete();
+            //     }
+            // };
+            // var loadFragmentShaderFileCallback = function (resource) {
+            //     loader._shaderLoaded++;
+            //     newProgram.fragmentShader = resource;
+            //     if (newProgram.vertexShader) {
+            //         // create Program
+            //         newProgram.program = _createProgram(gl, newProgram.vertexShader, newProgram.fragmentShader);
+            //         loader._checkComplete();
+            //     }
+            // };
 
-            if (json.programs) {
-                for (pid in json.programs) {
-                    newProgram = loader.glTF.programs[pid] = {
-                        vertexShader: null,
-                        fragmentShader: null,
-                        program: null
-                    };
-                    var program = json.programs[pid];
-                    loader._shaderRequested += 2;
+            // if (json.programs) {
+            //     for (pid in json.programs) {
+            //         newProgram = loader.glTF.programs[pid] = {
+            //             vertexShader: null,
+            //             fragmentShader: null,
+            //             program: null
+            //         };
+            //         var program = json.programs[pid];
+            //         loader._shaderRequested += 2;
 
-                    _loadShaderFile(loader.baseUri + json.shaders[program.vertexShader].uri, loadVertexShaderFileCallback);
-                    _loadShaderFile(loader.baseUri + json.shaders[program.fragmentShader].uri, loadFragmentShaderFileCallback);
-                }
-            }
+            //         _loadShaderFile(loader.baseUri + json.shaders[program.vertexShader].uri, loadVertexShaderFileCallback);
+            //         _loadShaderFile(loader.baseUri + json.shaders[program.fragmentShader].uri, loadFragmentShaderFileCallback);
+            //     }
+            // }
 
 
 
@@ -630,15 +593,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             case 5126: return new Float32Array(resource, byteOffset, countOfComponentType);
             default: return null; 
         }
-    }
-
-    function _getAccessorData(bufferViewData, accessor) {
-        return _arrayBuffer2TypedArray(
-            bufferViewData, 
-            accessor.byteOffset, 
-            accessor.count * Type2NumOfComponent[accessor.type],
-            accessor.componentType
-            );
     }
 
     function _getBaseUri(uri) {
