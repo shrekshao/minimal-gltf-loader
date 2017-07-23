@@ -9,6 +9,14 @@
     <script src="../src/third-party/gl-matrix-min.js"></script>
     <script src="../src/minimal-gltf-loader.js"></script>
     <script src="utility.js"></script>
+    <style>
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+        }
+    </style>
 </head>
 
 <body>
@@ -16,6 +24,9 @@
     <p id="description">
         An example viewer of the model loaded by Minimal-glTF-Loader
     </p>
+    <div id="controls">
+        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked> 
+    </div>
 
     <script id="vs-bbox" type="x-shader/x-vertex">
         #version 300 es
@@ -112,11 +123,15 @@
 
 
     <script>
-    var testNodeId = 0;
+    // var testNodeId = 0;
     (function()  {
         'use strict';
 
         var drawBoundingBox = true;
+
+        document.getElementById("bbox-toggle").addEventListener("change", function() {
+            drawBoundingBox = this.checked;
+        });
 
         var canvas = document.createElement('canvas');
         canvas.width = Math.min(window.innerWidth, window.innerHeight);
