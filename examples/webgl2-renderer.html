@@ -116,6 +116,7 @@
     (function()  {
         'use strict';
 
+        var drawBoundingBox = true;
 
         var canvas = document.createElement('canvas');
         canvas.width = Math.min(window.innerWidth, window.innerHeight);
@@ -459,8 +460,8 @@
                         drawPrimitive(mesh.primitives[i], matrix);
                     }
 
-                    BOUNDING_BOX.draw(mesh.boundingBox, matrix, modelView, perspective);
-                    gl.useProgram(program);
+                    // BOUNDING_BOX.draw(mesh.boundingBox, matrix, modelView, perspective);
+                    // gl.useProgram(program);
                 }
                 
 
@@ -492,8 +493,35 @@
 
                 gl.useProgram(program);
                 
-                for (i = 0, lenNodes = curScene.nodes.length; i < lenNodes; i++) {
+                for (var i = 0, len = curScene.nodes.length; i < len; i++) {
                     drawNode( glTF.nodes[curScene.nodes[i]], curScene.nodes[i] );
+                }
+
+                if (drawBoundingBox) {
+                    gl.useProgram(BOUNDING_BOX.program);
+                    gl.bindVertexArray(BOUNDING_BOX.vertexArray);
+
+                    var node, mesh;
+                    // @temp: assume all nodes are in cur scene
+                    // @potential fix: can label each node's scene at the setup
+                    for (i = 0, len = glTF.nodes.length; i < len; i++) {
+                        node = glTF.nodes[i];
+                        if (node.mesh !== null) {
+                            mesh = glTF.meshes[node.mesh];
+                            mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
+                            mat4.mul(localMVP, modelView, localMVP);
+                            mat4.mul(localMVP, perspective, localMVP);
+
+                            gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+                            
+                            gl.drawArrays(gl.LINES, 0, 24);
+                            
+                        }
+                        
+                    }
+
+                    gl.bindVertexArray(null);
+                    gl.useProgram(program);
                 }
 
                 requestAnimationFrame(render);

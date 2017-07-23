@@ -197,7 +197,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 console.log('dependent buffer data ready (instant), create bufferView ' + bufferViewID);
                 this.glTF.bufferViews[bufferViewID] = bufferViewObject = new BufferView( bufferView, bufferData );
                 callback(bufferViewObject);
-                // this._checkComplete();
+                this._checkComplete();
             } else {
                 // buffer not yet loaded
                 // add pending task to _bufferTasks
@@ -224,7 +224,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     }
                     
                     callback(bufferViewObject);
-                    loader._checkComplete();
+                    // loader._checkComplete();
 
                     // // create new bufferView for each mesh access with a different hierarchy
                     // // hierarchy transformation will be prepared in this way
