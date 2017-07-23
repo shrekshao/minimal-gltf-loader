@@ -223,7 +223,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         } else {
             // no need to load buffer from file
             // use cached ones
-            //console.log("use cached bufferView " + bufferViewID);
+            console.log("use cached bufferView " + bufferViewID);
             callback(bufferViewObject);
         }
     };
@@ -641,21 +641,21 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         xobj.send(null);
     }
 
-    function _loadShaderFile(url, callback) {
-        var xobj = new XMLHttpRequest();
-        xobj.responseType = 'text';
-        xobj.open('GET', url, true);
-        xobj.onreadystatechange = function () {
-            if (xobj.readyState == 4 && // Request finished, response ready
-                xobj.status == "200") { // Status OK
-                var file = xobj.response;
-                if (file && callback) {
-                    callback(file);
-                }
-            }
-        };
-        xobj.send(null);
-    }
+    // function _loadShaderFile(url, callback) {
+    //     var xobj = new XMLHttpRequest();
+    //     xobj.responseType = 'text';
+    //     xobj.open('GET', url, true);
+    //     xobj.onreadystatechange = function () {
+    //         if (xobj.readyState == 4 && // Request finished, response ready
+    //             xobj.status == "200") { // Status OK
+    //             var file = xobj.response;
+    //             if (file && callback) {
+    //                 callback(file);
+    //             }
+    //         }
+    //     };
+    //     xobj.send(null);
+    // }
 
     function _loadImage(url, iid, onload) {
         var img = new Image();
@@ -666,39 +666,39 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     }
 
 
-    function _createShader(gl, source, type) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        return shader;
-    }
+    // function _createShader(gl, source, type) {
+    //     var shader = gl.createShader(type);
+    //     gl.shaderSource(shader, source);
+    //     gl.compileShader(shader);
+    //     return shader;
+    // }
 
-    function _createProgram(gl, vertexShaderSource, fragmentShaderSource) {
-        var program = gl.createProgram();
-        var vshader = _createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
-        var fshader = _createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
-        gl.attachShader(program, vshader);
-        gl.deleteShader(vshader);
-        gl.attachShader(program, fshader);
-        gl.deleteShader(fshader);
-        gl.linkProgram(program);
+    // function _createProgram(gl, vertexShaderSource, fragmentShaderSource) {
+    //     var program = gl.createProgram();
+    //     var vshader = _createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
+    //     var fshader = _createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+    //     gl.attachShader(program, vshader);
+    //     gl.deleteShader(vshader);
+    //     gl.attachShader(program, fshader);
+    //     gl.deleteShader(fshader);
+    //     gl.linkProgram(program);
 
-        var log = gl.getProgramInfoLog(program);
-        if (log) {
-            console.log(log);
-        }
+    //     var log = gl.getProgramInfoLog(program);
+    //     if (log) {
+    //         console.log(log);
+    //     }
 
-        log = gl.getShaderInfoLog(vshader);
-        if (log) {
-            console.log(log);
-        }
+    //     log = gl.getShaderInfoLog(vshader);
+    //     if (log) {
+    //         console.log(log);
+    //     }
 
-        log = gl.getShaderInfoLog(fshader);
-        if (log) {
-            console.log(log);
-        }
+    //     log = gl.getShaderInfoLog(fshader);
+    //     if (log) {
+    //         console.log(log);
+    //     }
 
-        return program;
-    }
+    //     return program;
+    // }
 
 })();
