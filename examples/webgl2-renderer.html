@@ -134,8 +134,10 @@
         });
 
         var canvas = document.createElement('canvas');
-        canvas.width = Math.min(window.innerWidth, window.innerHeight);
-        canvas.height = canvas.width;
+        // canvas.width = Math.min(window.innerWidth, window.innerHeight);
+        // canvas.height = canvas.width;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         document.body.appendChild(canvas);
 
         var gl = canvas.getContext( 'webgl2', { antialias: true } );
@@ -220,12 +222,14 @@
 
         
         // -- Mouse Behaviour
-        var s = 0.1;
+        var s = 1;
         // var s = 1;
-        var t = -100;
+        // var t = -100;
+        var translate = vec3.create();
         // var t = -5;
         var mouseDown = false;
         var lastMouseY = 0;
+        var identityQ = quat.create();
         window.onmousedown = function(event) {
             mouseDown = true;
             lastMouseY = event.clientY;
@@ -241,13 +245,15 @@
             
             var deltaY = newY - lastMouseY;
             
-            s += deltaY / 1000;
+            // s += deltaY / 1000;
+            s *= (1 + deltaY / 1000);
             
             lastMouseY = newY;
         };
-        window.onwheel = function(event) {
-            t += -event.deltaY / 10;
-        };
+        // window.onwheel = function(event) {
+        //     translate[2] += -event.deltaY * 0.1;
+        //     // translate[2] *= 1 + (-event.deltaY * 0.01);
+        // };
 
         // -- Load glTF then render
         // var gltfUrl = '../glTFs/duck/duck.gltf';
@@ -271,7 +277,17 @@
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
 
             var curScene = glTF.scenes[glTF.defaultScene];
+
             
+
+            // adaptive camera view
+            s = 1.0 / Math.max( curScene.boundingBox.transform[0], Math.max(curScene.boundingBox.transform[5], curScene.boundingBox.transform[10]) );
+            mat4.getTranslation(translate, curScene.boundingBox.transform);
+            vec3.scale(translate, translate, -1 * s);
+            translate[0] += - 0.5 * curScene.boundingBox.transform[0] * s;
+            translate[1] += - 0.5 * curScene.boundingBox.transform[5] * s;
+            translate[2] += - 3 * curScene.boundingBox.transform[10] * s;
+
             // // -- Initialize program
             // var program = createProgram(gl, getShaderSource('vs-normal'), getShaderSource('fs-normal'));
             // var uniformMvpLocation = gl.getUniformLocation(program, "u_MVP");
@@ -398,7 +414,6 @@
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
 
-            var translate = vec3.create();
             
             var scale = vec3.create();
             
@@ -406,7 +421,8 @@
             var rotationSpeedY= 0.01;
 
             var perspective = mat4.create();
-            mat4.perspective(perspective, 0.785, 1, 1, 1000);
+            mat4.perspective(perspective, 0.785, canvas.width / canvas.height, 0.1, 1000);
+            // mat4.perspective(perspective, 0.785, canvas.width / canvas.height, 0.1,  2.8 * curScene.boundingBox.transform[10]);
 
             var modelView = mat4.create();
 
@@ -500,13 +516,25 @@
             // -- Render loop
             (function render() {
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
-                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-                vec3.set(translate, 0, 0, t);
                 vec3.set(scale, s, s, s);
+                // mat4.identity(modelView);
+                // mat4.translate(modelView, modelView, translate);
+                // mat4.scale(modelView, modelView, scale);
+                // mat4.fromRotationTranslationScale(modelView, identityQ, translate, scale);
                 mat4.identity(modelView);
-                mat4.translate(modelView, modelView, translate);
-                mat4.scale(modelView, modelView, scale);
+                modelView[0] = s;
+                modelView[5] = s;
+                modelView[10] = s;
+                modelView[12] = translate[0];
+                modelView[13] = translate[1];
+                modelView[14] = translate[2];
+                // modelView[12] = translate[0] * s;
+                // modelView[13] = translate[1] * s;
+                // modelView[14] = translate[2] * s;
+
+                // mat4.perspective(perspective, 0.785, canvas.width / canvas.height, 0.1, translate[2] + curScene.boundingBox.transform[10]);
 
                 r += rotationSpeedY;
                 mat4.rotateY(modelView, modelView, r);
