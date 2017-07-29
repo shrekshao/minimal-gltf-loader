@@ -7,7 +7,8 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 (:exclamation: In development, newly migrate to glTF 2, not backward compatible for now, really feature incomplete for now -_-)
 
 ## Viewer Screenshot
-
+![](img/viewer-screenshot-gear.png)
+![](img/viewer-screenshot-gear-bbox.png)
 ![](img/viewer-screenshot-buggy.png)
 ![](img/viewer-screenshot-buggy-bbox.png)
 
