@@ -6,6 +6,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var Scene = MinimalGLTFLoader.Scene = function () {
         this.nodes = [];    // root node id of this scene, reference to glTFModel.nodes
 
+        this.boundingBox = null;
     };
 
     /**
@@ -63,12 +64,25 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
-    var Node = MinimalGLTFLoader.Node = function () {
+    var Node = MinimalGLTFLoader.Node = function (nodeID) {
+        this.nodeID = nodeID;
         this.matrix = mat4.create();
-        this.children = [];  // nodes
+        this.children = [];  // node object
         // this.meshIDs = [];
-        this.mesh = null;
+        this.mesh = null;   // mesh object
+
+
+        // this.scenes = [];
     };
+
+    Node.prototype.traverse = function(parent, executeFunc) {
+        executeFunc(this, parent);
+        for (var i = 0, len = this.children.length; i < len; i++) {
+            this.children[i].traverse(this, executeFunc);
+        }
+    }
+
+
 
     var Mesh = MinimalGLTFLoader.Mesh = function () {
         this.meshID = -1;     // mesh id name in glTF json meshes
@@ -310,7 +324,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     var nodeID = nodes[n];
 
                     // Traverse node
-                    this._parseNode(json, nodeID, newScene.nodes);
+                    newScene.nodes[n] = this._parseNode(json, nodeID);
                 }
             }
         }
@@ -323,7 +337,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     glTFLoader.prototype._parseMesh = function(json, meshID) {
         if (this.glTF.meshes[meshID] !== undefined) {
             // mesh is already loaded
-            return;
+            return this.glTF.meshes[meshID];
         }
 
         var newMesh = new Mesh();
@@ -342,6 +356,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             primitive = primitives[p];
             newMesh.primitives.push(new Primitive(json, primitive));
         }
+
+        return newMesh;
     };
 
 
@@ -354,17 +370,18 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var scaleVec3 = vec3.create();
     var TRSMatrix = mat4.create();
     
-    glTFLoader.prototype._parseNode = function(json, nodeID, parentNodeIdsArray) {
+    glTFLoader.prototype._parseNode = function(json, nodeID) {
         if (this.glTF.nodes[nodeID] !== undefined) {
             // node is already loaded
-            return;
+            return this.glTF.nodes[nodeID];
         }
 
         var node = json.nodes[nodeID];
-        var newNode = new Node();
+        var newNode = new Node(nodeID);
         this.glTF.nodes[nodeID] = newNode;
 
-        parentNodeIdsArray.push(nodeID);
+        // parentNodeIdsArray.push(nodeID);
+
 
         // var curMatrix = mat4.create();
         var curMatrix = newNode.matrix;
@@ -423,8 +440,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // only this branch is valid in glTF2
 
             // newNode.meshes.push(node.mesh);
-            newNode.mesh = node.mesh;
-            this._parseMesh(json, node.mesh);
+            // newNode.mesh = node.mesh;
+            newNode.mesh = this._parseMesh(json, node.mesh);
         }
 
 
@@ -434,11 +451,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             var childreLen = children.length;
             for (var c = 0; c < childreLen; ++c) {
                 var childNodeID = children[c];
-                this._parseNode(json, childNodeID, newNode.children);
+                newNode.children[c] = this._parseNode(json, childNodeID);
             }
         }
         
-
+        return newNode;
     };
 
 
@@ -571,6 +588,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // @todo: ?? hook up pointers, get scene bounding box, etc.
         var i, leni, j, lenj;
 
+        var scene;
         var node;
         var mesh, primitive, accessor;
 
@@ -622,6 +640,65 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
 
             mesh.boundingBox.calculateTransform();
+        }
+
+
+        // scene Bounding box
+        // var tmpVec4a = vec4.create();
+        // var tmpVec4b = vec4.create();
+        var tmpVec3a = vec3.create();
+        var tmpVec3b = vec3.create();
+        // var tmpMat4 = mat4.create();
+        var nodeMatrix = new Array(this.glTF.nodes.length);
+        for(i = 0, leni = nodeMatrix.length; i < leni; i++) {
+            nodeMatrix[i] = mat4.create();
+        }
+
+        function execUpdateBBox(n, parent){
+            var tmpMat4 = nodeMatrix[n.nodeID];
+            if (parent !== null) {
+                mat4.mul(tmpMat4, nodeMatrix[parent.nodeID], n.matrix);
+            } else {
+                mat4.copy(tmpMat4, n.matrix);
+            }
+            
+            
+            if (n.mesh) {
+                mesh = n.mesh;
+                if (mesh.boundingBox) {
+                    // vec4.set(tmpVec4a, mesh.boundingBox.min[0], mesh.boundingBox.min[1], mesh.boundingBox.min[2], 1.0);
+                    // vec4.set(tmpVec4b, mesh.boundingBox.max[0], mesh.boundingBox.max[1], mesh.boundingBox.max[2], 1.0);
+                    // vec4.transformMat4(tmpVec4a, tmpVec4a, tmpMat4);
+                    // vec4.transformMat4(tmpVec4b, tmpVec4b, tmpMat4);
+                    vec3.transformMat4(tmpVec3a, mesh.boundingBox.min, tmpMat4);
+                    vec3.transformMat4(tmpVec3b, mesh.boundingBox.max, tmpMat4);
+
+                    // scene.boundingBox.updateBoundingBox(mesh.boundingBox);
+                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3a);
+                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3b);
+                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3b);
+                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3a);
+                }
+            }
+        }
+
+
+        for (i = 0, leni = this.glTF.scenes.length; i < leni; i++) {
+            scene = this.glTF.scenes[i];
+            scene.boundingBox = new BoundingBox(
+                vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), 
+                vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY)
+            );
+
+
+            // @todo: !! this is not AABB, but an AABB after rotation.. this update is not correct...
+            for (j = 0, lenj = scene.nodes.length; j < lenj; j++) {
+                node = scene.nodes[j];
+                // mat4.identity(tmpMat4);
+                node.traverse(null, execUpdateBBox);
+            }
+
+            scene.boundingBox.calculateTransform();
         }
 
 

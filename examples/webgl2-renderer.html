@@ -259,9 +259,9 @@
         
         // 2.0
         // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
@@ -414,6 +414,8 @@
             var localMVP = mat4.create();
             var localMVNormal = mat4.create();
 
+            var VP = mat4.create();
+
             var nodeMatrix = new Array(glTF.nodes.length);
             for(i = 0, len = nodeMatrix.length; i < len; i++) {
                 nodeMatrix[i] = mat4.create();
@@ -423,6 +425,7 @@
             function drawPrimitive(primitive, matrix) {
                 mat4.multiply(localMV, modelView, matrix);
                 mat4.multiply(localMVP, perspective, localMV);
+                // mat4.multiply(localMVP, VP, matrix);
 
                 mat4.invert(localMVNormal, localMV);
                 mat4.transpose(localMVNormal, localMVNormal);
@@ -469,7 +472,9 @@
                 // draw cur node's mesh
                 if (node.mesh !== null) {
                     // drawMesh(glTF.meshes[node.mesh], matrix);
-                    var mesh = glTF.meshes[node.mesh];
+
+                    // var mesh = glTF.meshes[node.mesh];
+                    var mesh = node.mesh;
                     for (i = 0, len = mesh.primitives.length; i < len; i++) {
                         // draw primitive
                         drawPrimitive(mesh.primitives[i], matrix);
@@ -484,8 +489,9 @@
                 
                 var childNodeID;
                 for (i = 0, len = node.children.length; i < len; i++) {
-                    childNodeID = node.children[i];
-                    drawNode(glTF.nodes[childNodeID], childNodeID, matrix);
+                    // childNodeID = node.children[i];
+                    // drawNode(glTF.nodes[childNodeID], childNodeID, matrix);
+                    drawNode(node.children[i], node.children[i].nodeID, matrix);
                 }
             }
 
@@ -505,11 +511,13 @@
                 r += rotationSpeedY;
                 mat4.rotateY(modelView, modelView, r);
 
+                mat4.mul(VP, perspective, modelView);
 
                 gl.useProgram(program);
                 
                 for (var i = 0, len = curScene.nodes.length; i < len; i++) {
-                    drawNode( glTF.nodes[curScene.nodes[i]], curScene.nodes[i] );
+                    // drawNode( glTF.nodes[curScene.nodes[i]], curScene.nodes[i] );
+                    drawNode( curScene.nodes[i], curScene.nodes[i].nodeID );
                 }
 
                 if (drawBoundingBox) {
@@ -522,18 +530,23 @@
                     for (i = 0, len = glTF.nodes.length; i < len; i++) {
                         node = glTF.nodes[i];
                         if (node.mesh !== null) {
-                            mesh = glTF.meshes[node.mesh];
+                            // mesh = glTF.meshes[node.mesh];
+                            mesh = node.mesh;
                             mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
-                            mat4.mul(localMVP, modelView, localMVP);
-                            mat4.mul(localMVP, perspective, localMVP);
+                            mat4.mul(localMVP, VP, localMVP);
 
                             gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
                             
                             gl.drawArrays(gl.LINES, 0, 24);
                             
-                        }
-                        
+                        }   
                     }
+
+                    // scene bounding box
+                    mat4.mul(localMVP, VP, curScene.boundingBox.transform);
+                    gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+                    gl.drawArrays(gl.LINES, 0, 24);
+
 
                     gl.bindVertexArray(null);
                     gl.useProgram(program);
