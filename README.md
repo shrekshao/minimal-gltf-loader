@@ -11,13 +11,24 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 ![](img/viewer-screenshot-gear-bbox.png)
 ![](img/viewer-screenshot-buggy.png)
 ![](img/viewer-screenshot-buggy-bbox.png)
+![](img/viewer-screenshot-avocado.png)
+![](img/viewer-screenshot-duck.png)
 
-## Features
+## Loading Features
 
-* [x] Geometry Loader
-* [x] Image Loader
+* [x] Accessors
+* [x] Buffers
+* [x] BufferViews
+* [x] Images
+* [x] Meshes
+* [x] Nodes
+* [x] Primitives
+* [x] Samplers
+* [x] Textures
 * [x] ~~Shader Loader~~ (not part of the core of glTF 2.0)
-* [ ] Animation
+* [ ] Animations
+* [ ] Cameras
+* [ ] Materials
 * [ ] Skins
 
 ## Formats
@@ -30,11 +41,13 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 ## Examples
 
 * [x] WebGL 2 simple renderer
-    * [x] baseColor
+    * [x] baseColorFactor
+    * [x] baseColorTexture
     * [ ] PBR
     * [ ] Animation
     * [ ] Occlusion Culling experiment 
         * [x] Bounding Box (fast iterated)
+        * [x] Scene Bounding Box (fast iterated) And auto centered and scaled
         * [ ] Build octree
         * [ ] Occlusion Query with hierarchy
 
