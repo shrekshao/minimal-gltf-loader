@@ -154,6 +154,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         gl.texImage2D(
             gl.TEXTURE_2D,  // assumed
             0,        // Level of details
+            // gl.RGB, // Format
+            // gl.RGB,
             gl.RGBA, // Format
             gl.RGBA,
             gl.UNSIGNED_BYTE, // Size of each channel
@@ -798,11 +800,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // hook up image object
         if (this.glTF.textures) {
             for (i = 0, leni = this.glTF.textures.length; i < leni; i++) {
-                if (this.glTF.samplers) {
+                if (this.glTF.samplers && this.glTF.textures[i].sampler !== null) {
                     this.glTF.textures[i].sampler = this.glTF.samplers[ this.glTF.textures[i].sampler ];
                 }
                 
-                if (this.glTF.images) {
+                if (this.glTF.images && this.glTF.textures[i].source !== null) {
                     this.glTF.textures[i].source = this.glTF.images[ this.glTF.textures[i].source ];
                 }
             }
@@ -850,18 +852,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     // ------ Scope limited private util functions---------------
-
-    function _arrayBuffer2TypedArray(resource, byteOffset, countOfComponentType, componentType) {
-        switch(componentType) {
-            // @todo: finish
-            case 5122: return new Int16Array(resource, byteOffset, countOfComponentType);
-            case 5123: return new Uint16Array(resource, byteOffset, countOfComponentType);
-            case 5124: return new Int32Array(resource, byteOffset, countOfComponentType);
-            case 5125: return new Uint32Array(resource, byteOffset, countOfComponentType);
-            case 5126: return new Float32Array(resource, byteOffset, countOfComponentType);
-            default: return null; 
-        }
-    }
 
     function _getBaseUri(uri) {
         

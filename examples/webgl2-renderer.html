@@ -340,21 +340,14 @@
             // translate[2] *= 1 + (-event.deltaY * 0.01);
         };
 
-        // -- Load glTF then render
-        // var gltfUrl = '../glTFs/duck/duck.gltf';
-        // var gltfUrl = '../glTFs/CesiumMilkTruck/CesiumMilkTruck.gltf'
-        // var gltfUrl = '../glTFs/2_cylinder_engine/2_cylinder_engine.gltf';
-        // var gltfUrl = '../glTFs/Reciprocating_Saw/Reciprocating_Saw.gltf';
-        // var gltfUrl = '../glTFs/buggy/buggy.gltf';
-
         
         // 2.0
         // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
@@ -476,7 +469,7 @@
                         gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                         gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                     } else {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
+                        gl.bindBuffer(bufferView.target, bufferView.buffer);
                     }
                     
                     gl.vertexAttribPointer(
@@ -496,7 +489,7 @@
                         gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                         gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                     } else {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
+                        gl.bindBuffer(bufferView.target, bufferView.buffer);
                     }
                     
                     gl.vertexAttribPointer(
@@ -510,7 +503,7 @@
                     gl.enableVertexAttribArray(NORMAL_LOCATION);
 
                     // @tmp, should consider together with material
-                    if (primitive.attributes['TEXCOORD_0']) {
+                    if (primitive.attributes['TEXCOORD_0'] !== undefined) {
                         accessor = glTF.accessors[ primitive.attributes['TEXCOORD_0'] ];
                         bufferView = accessor.bufferView;
                         if (bufferView.target === null) {
@@ -518,7 +511,7 @@
                             gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                             gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                         } else {
-                            gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
+                            gl.bindBuffer(bufferView.target, bufferView.buffer);
                         }
                         
                         gl.vertexAttribPointer(
