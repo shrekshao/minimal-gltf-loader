@@ -63,6 +63,21 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.buffer = null;     // gl buffer
     };
 
+    BufferView.prototype.createBuffer = function(gl) {
+        this.buffer = gl.createBuffer();
+    };
+
+    BufferView.prototype.bindData = function(gl) {
+        if (this.target) {
+            gl.bindBuffer(this.target, this.buffer);
+            gl.bufferData(this.target, this.data, gl.STATIC_DRAW);
+            gl.bindBuffer(this.target, null);
+            return true;
+        }
+        return false;
+    };
+
+
 
     var Node = MinimalGLTFLoader.Node = function (nodeID) {
         this.nodeID = nodeID;
@@ -125,6 +140,62 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
+    var Texture = MinimalGLTFLoader.Texture = function (t) {
+        this.sampler = t.sampler !== undefined ? t.sampler : null;  // id for now, hook to object later
+        this.source = t.source !== undefined ? t.source : null; // id for now, hook to object later
+
+        this.texture = null;
+    };
+
+    Texture.prototype.createTexture = function(i, gl) {
+        gl.activeTexture(gl.TEXTURE0 + i);
+        this.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,  // assumed
+            0,        // Level of details
+            gl.RGBA, // Format
+            gl.RGBA,
+            gl.UNSIGNED_BYTE, // Size of each channel
+            this.source
+        );
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+
+    var Sampler = MinimalGLTFLoader.Sampler = function (s) {
+        this.magFilter = s.magFilter !== undefined ? s.magFilter : null;
+        this.minFilter = s.minFilter !== undefined ? s.minFilter : null;
+        this.wrapS = s.wrapS !== undefined ? s.wrapS : 10497;
+        this.wrapT = s.wrapT !== undefined ? s.wrapT : 10497;
+
+        this.sampler = null;
+    };
+
+    Sampler.prototype.createSampler = function(gl) {
+        this.sampler = gl.createSampler();
+        if (this.minFilter) {
+            gl.samplerParameteri(this.sampler, gl.TEXTURE_MIN_FILTER, this.minFilter);
+        } else {
+            gl.samplerParameteri(this.sampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+        }
+        if (this.magFilter) {
+            gl.samplerParameteri(this.sampler, gl.TEXTURE_MAG_FILTER, this.magFilter);
+        } else {
+            gl.samplerParameteri(this.sampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        }
+        gl.samplerParameteri(this.sampler, gl.TEXTURE_WRAP_S, this.wrapS);
+        gl.samplerParameteri(this.sampler, gl.TEXTURE_WRAP_T, this.wrapT);
+    };
+
+    // Sampler.prototype.bindSampler = function(i, gl) {
+    //     gl.bindSampler(i, this.sampler);
+    // }
+
+    var Material = MinimalGLTFLoader.Material = function (m) {
+
+    };
+
     /**
      * 
      */
@@ -156,6 +227,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         // this.shaders = {};      //glTF 1.0, deprecated in 2.0 core
         // this.programs = {};     //glTF 1.0, deprecated in 2.0 core
+
+        if (gltf.textures) {
+            this.textures = new Array(gltf.textures.length);
+        }
+
+        if (gltf.samplers) {
+            this.samplers = new Array(gltf.samplers.length);
+        }
 
         if (gltf.images) {
             this.images = new Array(gltf.images.length);
@@ -305,6 +384,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     );
                 }
             }
+        }
+
+        // load all textures
+        if (json.textures) {
+            for (i = 0, len = json.textures.length; i < len; i++) {
+                this.glTF.textures[i] = new Texture(json.textures[i]);
+            }
+        }
+
+        // load all samplers 
+        if (json.samplers) {
+            for (i = 0, len = json.samplers.length; i < len; i++) {
+                this.glTF.samplers[i] = new Sampler(json.samplers[i]);
+            } 
         }
 
 
@@ -603,7 +696,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         // bounding box
         
-        
         for (i = 0, leni = this.glTF.meshes.length; i < leni; i++) {
             mesh = this.glTF.meshes[i];
             mesh.boundingBox = new BoundingBox( vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY) );
@@ -701,6 +793,21 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             scene.boundingBox.calculateTransform();
         }
 
+
+
+        // hook up image object
+        if (this.glTF.textures) {
+            for (i = 0, leni = this.glTF.textures.length; i < leni; i++) {
+                if (this.glTF.samplers) {
+                    this.glTF.textures[i].sampler = this.glTF.samplers[ this.glTF.textures[i].sampler ];
+                }
+                
+                if (this.glTF.images) {
+                    this.glTF.textures[i].source = this.glTF.images[ this.glTF.textures[i].source ];
+                }
+            }
+        }
+        
 
     };
 
