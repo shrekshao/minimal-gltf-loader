@@ -917,6 +917,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     function _loadImage(url, iid, onload) {
         var img = new Image();
+        img.crossOrigin = "Anonymous";
         img.src = url;
         img.onload = function() {
             onload(img, iid);
