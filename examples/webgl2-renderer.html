@@ -253,6 +253,8 @@
             })()
         };
 
+        
+
         var defaultSampler = gl.createSampler();
         gl.samplerParameteri(defaultSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
         gl.samplerParameteri(defaultSampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -356,7 +358,11 @@
 
             var curScene = glTF.scenes[glTF.defaultScene];
 
-            
+            // draw multiple copies of the glTF scene
+            // to build a relative complex scene for octree and occlusion query test
+            var sceneRootTransforms = [mat4.create(), mat4.create()];
+            var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
+            mat4.fromTranslation(sceneRootTransforms[1], sceneDeltaTranslate);
 
             // center
             s = 1.0 / Math.max( curScene.boundingBox.transform[0], Math.max(curScene.boundingBox.transform[5], curScene.boundingBox.transform[10]) );
@@ -378,6 +384,7 @@
 
             vec3.set(translate, 0, 0, -1.5);
             s = 1;
+
 
 
             // -- Initialize vertex array
@@ -712,6 +719,8 @@
                 gl.useProgram(program.program);
 
                 drawScene(curScene);
+
+                drawScene(curScene, sceneRootTransforms[1]);
 
                 if (drawBoundingBox) {
                     gl.useProgram(BOUNDING_BOX.program);
