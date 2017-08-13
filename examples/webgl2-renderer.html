@@ -25,7 +25,11 @@
         An example viewer of the model loaded by Minimal-glTF-Loader
     </p>
     <div id="controls">
-        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked> 
+        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked><br>
+        Bounding Box type: <select id="bbox-type">
+            <option value="aabb">AABB</option>
+            <option value="obb">OBB</option>
+        </select>
     </div>
 
     <script id="vs-bbox" type="x-shader/x-vertex">
@@ -177,9 +181,14 @@
         'use strict';
 
         var drawBoundingBox = true;
+        var isBoundingBoxAABB = true;    // false: obb
 
         document.getElementById("bbox-toggle").addEventListener("change", function() {
             drawBoundingBox = this.checked;
+        });
+
+        document.getElementById("bbox-type").addEventListener("change", function() {
+            isBoundingBoxAABB = this.value == 'aabb';
         });
 
         var canvas = document.createElement('canvas');
@@ -720,13 +729,13 @@
 
                 drawScene(curScene);
 
-                drawScene(curScene, sceneRootTransforms[1]);
+                // drawScene(curScene, sceneRootTransforms[1]);
 
                 if (drawBoundingBox) {
                     gl.useProgram(BOUNDING_BOX.program);
                     gl.bindVertexArray(BOUNDING_BOX.vertexArray);
 
-                    var node, mesh;
+                    var node, mesh, bbox;
                     // @temp: assume all nodes are in cur scene
                     // @potential fix: can label each node's scene at the setup
                     for (i = 0, len = glTF.nodes.length; i < len; i++) {
@@ -734,13 +743,20 @@
                         if (node.mesh !== null) {
                             // mesh = glTF.meshes[node.mesh];
                             mesh = node.mesh;
-                            mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
-                            mat4.mul(localMVP, VP, localMVP);
+
+                            if (isBoundingBoxAABB) {
+                                // aabb
+                                mat4.mul(localMVP, VP, node.aabb.transform);
+                            } else {
+                                // obb
+                                mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
+                                mat4.mul(localMVP, VP, localMVP);
+                            }
 
                             gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-                            
+                                
                             gl.drawArrays(gl.LINES, 0, 24);
-                            
+
                         }   
                     }
 

@@ -24,17 +24,63 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     BoundingBox.prototype.updateBoundingBox = function (bbox) {
         vec3.min(this.min, this.min, bbox.min);
         vec3.max(this.max, this.max, bbox.max);
-    }
+    };
 
     BoundingBox.prototype.calculateTransform = function () {
+        // transform from a unit cube whose min = (0, 0, 0) and max = (1, 1, 1)
+
+        // scale
         this.transform[0] = this.max[0] - this.min[0];
         this.transform[5] = this.max[1] - this.min[1];
         this.transform[10] = this.max[2] - this.min[2];
+        // translate
         this.transform[12] = this.min[0];
         this.transform[13] = this.min[1];
         this.transform[14] = this.min[2];
-    }
+    };
 
+    BoundingBox.getAABBFromOBB = (function() {
+        var transformRight = vec3.create();
+        var transformUp = vec3.create();
+        var transformBackward = vec3.create();
+
+        var tmpVec3a = vec3.create();
+        var tmpVec3b = vec3.create();
+
+        return (function (obb, matrix) {
+            vec3.set(transformRight, matrix[0], matrix[1], matrix[2]);
+            vec3.set(transformUp, matrix[4], matrix[5], matrix[6]);
+            vec3.set(transformBackward, matrix[8], matrix[9], matrix[10]);
+
+            var min = vec3.fromValues(matrix[12], matrix[13], matrix[14]);  // init with matrix translation
+            var max = vec3.clone(min);
+
+            vec3.scale(tmpVec3a, transformRight, obb.min[0]);
+            vec3.scale(tmpVec3b, transformRight, obb.max[0]);
+            vec3.min(transformRight, tmpVec3a, tmpVec3b);
+            vec3.add(min, min, transformRight);
+            vec3.max(transformRight, tmpVec3a, tmpVec3b);
+            vec3.add(max, max, transformRight);
+
+            vec3.scale(tmpVec3a, transformUp, obb.min[1]);
+            vec3.scale(tmpVec3b, transformUp, obb.max[1]);
+            vec3.min(transformUp, tmpVec3a, tmpVec3b);
+            vec3.add(min, min, transformUp);
+            vec3.max(transformUp, tmpVec3a, tmpVec3b);
+            vec3.add(max, max, transformUp);
+
+            vec3.scale(tmpVec3a, transformBackward, obb.min[2]);
+            vec3.scale(tmpVec3b, transformBackward, obb.max[2]);
+            vec3.min(transformBackward, tmpVec3a, tmpVec3b);
+            vec3.add(min, min, transformBackward);
+            vec3.max(transformBackward, tmpVec3a, tmpVec3b);
+            vec3.add(max, max, transformBackward);
+
+            var bbox = new BoundingBox(min, max);
+            bbox.calculateTransform();
+            return bbox;
+        });
+    })();
 
 
 
@@ -88,6 +134,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
         // this.scenes = [];
+
+        this.aabb = null;   // axis aligned bounding box, not need to apply node transform to aabb
     };
 
     Node.prototype.traverse = function(parent, executeFunc) {
@@ -103,7 +151,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.meshID = -1;     // mesh id name in glTF json meshes
         this.primitives = [];
 
-        this.boundingBox = null;
+        this.boundingBox = null;    // kind of function as an OBB
     };
 
     var Primitive = MinimalGLTFLoader.Primitive = function (json, p) {
@@ -740,8 +788,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // scene Bounding box
         // var tmpVec4a = vec4.create();
         // var tmpVec4b = vec4.create();
-        var tmpVec3a = vec3.create();
-        var tmpVec3b = vec3.create();
+        // var tmpVec3a = vec3.create();
+        // var tmpVec3b = vec3.create();
         // var tmpMat4 = mat4.create();
         var nodeMatrix = new Array(this.glTF.nodes.length);
         for(i = 0, leni = nodeMatrix.length; i < leni; i++) {
@@ -760,18 +808,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             if (n.mesh) {
                 mesh = n.mesh;
                 if (mesh.boundingBox) {
-                    // vec4.set(tmpVec4a, mesh.boundingBox.min[0], mesh.boundingBox.min[1], mesh.boundingBox.min[2], 1.0);
-                    // vec4.set(tmpVec4b, mesh.boundingBox.max[0], mesh.boundingBox.max[1], mesh.boundingBox.max[2], 1.0);
-                    // vec4.transformMat4(tmpVec4a, tmpVec4a, tmpMat4);
-                    // vec4.transformMat4(tmpVec4b, tmpVec4b, tmpMat4);
-                    vec3.transformMat4(tmpVec3a, mesh.boundingBox.min, tmpMat4);
-                    vec3.transformMat4(tmpVec3b, mesh.boundingBox.max, tmpMat4);
 
-                    // scene.boundingBox.updateBoundingBox(mesh.boundingBox);
-                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3a);
-                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3b);
-                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3b);
-                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3a);
+                    n.aabb = BoundingBox.getAABBFromOBB(mesh.boundingBox, tmpMat4);
+
+                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
+                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
+
+                    // vec3.transformMat4(tmpVec3a, mesh.boundingBox.min, tmpMat4);
+                    // vec3.transformMat4(tmpVec3b, mesh.boundingBox.max, tmpMat4);
+
+                    // // scene.boundingBox.updateBoundingBox(mesh.boundingBox);
+                    // vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3a);
+                    // vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3b);
+                    // vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3b);
+                    // vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3a);
                 }
             }
         }
