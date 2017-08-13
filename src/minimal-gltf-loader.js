@@ -143,7 +143,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         for (var i = 0, len = this.children.length; i < len; i++) {
             this.children[i].traverse(this, executeFunc);
         }
-    }
+    };
 
 
 
@@ -416,6 +416,16 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // }).bind(this);
         var loader = this;
 
+
+        // tmp fix
+        function getBufferViewCallbackExec() {
+            var accessor = json.accessors[i];
+            var ii = i;
+            return function(bufferView) {
+                loader.glTF.accessors[ii] = new Accessor(accessor, bufferView);
+            };
+        }
+
         // load all accessors (and their dependent bufferView)
         if (json.accessors) {
             for (i = 0, len = json.accessors.length; i < len; i++) {
@@ -423,14 +433,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 if (a.bufferView !== undefined) {
                     // this._getBufferViewData(json, a.bufferView, callbackAccessor);
                     this._getBufferViewData(json, a.bufferView, 
-                        (function(){
-                            var accessor = json.accessors[i];
-                            var ii = i;
-                            return function(bufferView) {
-                                
-                                loader.glTF.accessors[ii] = new Accessor(accessor, bufferView);
-                            };
-                        })()
+                        getBufferViewCallbackExec()
                     );
                 }
             }
@@ -753,8 +756,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             for (j = 0, lenj = mesh.primitives.length; j < lenj; j++) {
                 primitive = mesh.primitives[j];
 
-                if (primitive.attributes['POSITION'] !== undefined) {
-                    accessor = this.glTF.accessors[ primitive.attributes['POSITION'] ];
+                if (primitive.attributes.POSITION !== undefined) {
+                    accessor = this.glTF.accessors[ primitive.attributes.POSITION ];
                     if (accessor.max) {
                         // @todo: handle cases where no min max are provided
 

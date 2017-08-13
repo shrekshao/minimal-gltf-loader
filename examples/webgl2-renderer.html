@@ -208,33 +208,33 @@
 
         var BOUNDING_BOX = {
             vertexData: new Float32Array([
-                0.0, 0.0, 0.0
-                ,1.0, 0.0, 0.0
-                ,0.0, 0.0, 0.0
-                ,0.0, 1.0, 0.0
-                ,0.0, 0.0, 0.0
-                ,0.0, 0.0, 1.0
+                0.0, 0.0, 0.0,
+                1.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 1.0,
 
-                ,0.0, 1.0, 1.0
-                ,1.0, 1.0, 1.0
-                ,0.0, 1.0, 1.0
-                ,0.0, 1.0, 0.0
-                ,0.0, 1.0, 1.0
-                ,0.0, 0.0, 1.0
+                0.0, 1.0, 1.0,
+                1.0, 1.0, 1.0,
+                0.0, 1.0, 1.0,
+                0.0, 1.0, 0.0,
+                0.0, 1.0, 1.0,
+                0.0, 0.0, 1.0,
 
-                ,1.0, 1.0, 0.0
-                ,1.0, 1.0, 1.0
-                ,1.0, 1.0, 0.0
-                ,0.0, 1.0, 0.0
-                ,1.0, 1.0, 0.0
-                ,1.0, 0.0, 0.0
+                1.0, 1.0, 0.0,
+                1.0, 1.0, 1.0,
+                1.0, 1.0, 0.0,
+                0.0, 1.0, 0.0,
+                1.0, 1.0, 0.0,
+                1.0, 0.0, 0.0,
 
-                ,1.0, 0.0, 1.0
-                ,1.0, 0.0, 0.0
-                ,1.0, 0.0, 1.0
-                ,1.0, 1.0, 1.0
-                ,1.0, 0.0, 1.0
-                ,0.0, 0.0, 1.0
+                1.0, 0.0, 1.0,
+                1.0, 0.0, 0.0,
+                1.0, 0.0, 1.0,
+                1.0, 1.0, 1.0,
+                1.0, 0.0, 1.0,
+                0.0, 0.0, 1.0
             ]),
 
             vertexArray: gl.createVertexArray(),
@@ -304,7 +304,7 @@
             uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
-        }
+        };
 
         program = createProgram(gl, getShaderSource('vs-texture'), getShaderSource('fs-texture'));
         var programBaseTexture = {
@@ -313,7 +313,7 @@
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
             uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        }
+        };
 
         
         // -- Mouse Behaviour
@@ -478,7 +478,7 @@
                     // for (attribute in primitive.attributes) {
                     //     accessor = glTF.accessors[ primitive.attributes[attribute] ];
                     // }
-                    accessor = glTF.accessors[ primitive.attributes['POSITION'] ];
+                    accessor = glTF.accessors[ primitive.attributes.POSITION ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
                         // bufferView.target = gl.ARRAY_BUFFER;
@@ -498,7 +498,7 @@
                         );
                     gl.enableVertexAttribArray(POSITION_LOCATION);
 
-                    accessor = glTF.accessors[ primitive.attributes['NORMAL'] ];
+                    accessor = glTF.accessors[ primitive.attributes.NORMAL ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
                         // bufferView.target = gl.ARRAY_BUFFER;
@@ -519,8 +519,8 @@
                     gl.enableVertexAttribArray(NORMAL_LOCATION);
 
                     // @tmp, should consider together with material
-                    if (primitive.attributes['TEXCOORD_0'] !== undefined) {
-                        accessor = glTF.accessors[ primitive.attributes['TEXCOORD_0'] ];
+                    if (primitive.attributes.TEXCOORD_0 !== undefined) {
+                        accessor = glTF.accessors[ primitive.attributes.TEXCOORD_0 ];
                         bufferView = accessor.bufferView;
                         if (bufferView.target === null) {
                             // bufferView.target = gl.ARRAY_BUFFER;
