@@ -25,7 +25,11 @@
         An example viewer of the model loaded by Minimal-glTF-Loader
     </p>
     <div id="controls">
-        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked> 
+        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked><br>
+        Bounding Box type: <select id="bbox-type">
+            <option value="aabb">AABB</option>
+            <option value="obb">OBB</option>
+        </select>
     </div>
 
     <script id="vs-bbox" type="x-shader/x-vertex">
@@ -177,9 +181,14 @@
         'use strict';
 
         var drawBoundingBox = true;
+        var isBoundingBoxAABB = true;    // false: obb
 
         document.getElementById("bbox-toggle").addEventListener("change", function() {
             drawBoundingBox = this.checked;
+        });
+
+        document.getElementById("bbox-type").addEventListener("change", function() {
+            isBoundingBoxAABB = this.value == 'aabb';
         });
 
         var canvas = document.createElement('canvas');
@@ -199,33 +208,33 @@
 
         var BOUNDING_BOX = {
             vertexData: new Float32Array([
-                0.0, 0.0, 0.0
-                ,1.0, 0.0, 0.0
-                ,0.0, 0.0, 0.0
-                ,0.0, 1.0, 0.0
-                ,0.0, 0.0, 0.0
-                ,0.0, 0.0, 1.0
+                0.0, 0.0, 0.0,
+                1.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 1.0,
 
-                ,0.0, 1.0, 1.0
-                ,1.0, 1.0, 1.0
-                ,0.0, 1.0, 1.0
-                ,0.0, 1.0, 0.0
-                ,0.0, 1.0, 1.0
-                ,0.0, 0.0, 1.0
+                0.0, 1.0, 1.0,
+                1.0, 1.0, 1.0,
+                0.0, 1.0, 1.0,
+                0.0, 1.0, 0.0,
+                0.0, 1.0, 1.0,
+                0.0, 0.0, 1.0,
 
-                ,1.0, 1.0, 0.0
-                ,1.0, 1.0, 1.0
-                ,1.0, 1.0, 0.0
-                ,0.0, 1.0, 0.0
-                ,1.0, 1.0, 0.0
-                ,1.0, 0.0, 0.0
+                1.0, 1.0, 0.0,
+                1.0, 1.0, 1.0,
+                1.0, 1.0, 0.0,
+                0.0, 1.0, 0.0,
+                1.0, 1.0, 0.0,
+                1.0, 0.0, 0.0,
 
-                ,1.0, 0.0, 1.0
-                ,1.0, 0.0, 0.0
-                ,1.0, 0.0, 1.0
-                ,1.0, 1.0, 1.0
-                ,1.0, 0.0, 1.0
-                ,0.0, 0.0, 1.0
+                1.0, 0.0, 1.0,
+                1.0, 0.0, 0.0,
+                1.0, 0.0, 1.0,
+                1.0, 1.0, 1.0,
+                1.0, 0.0, 1.0,
+                0.0, 0.0, 1.0
             ]),
 
             vertexArray: gl.createVertexArray(),
@@ -252,6 +261,8 @@
                 });
             })()
         };
+
+        
 
         var defaultSampler = gl.createSampler();
         gl.samplerParameteri(defaultSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
@@ -293,7 +304,7 @@
             uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
-        }
+        };
 
         program = createProgram(gl, getShaderSource('vs-texture'), getShaderSource('fs-texture'));
         var programBaseTexture = {
@@ -302,7 +313,7 @@
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
             uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        }
+        };
 
         
         // -- Mouse Behaviour
@@ -356,7 +367,11 @@
 
             var curScene = glTF.scenes[glTF.defaultScene];
 
-            
+            // draw multiple copies of the glTF scene
+            // to build a relative complex scene for octree and occlusion query test
+            var sceneRootTransforms = [mat4.create(), mat4.create()];
+            var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
+            mat4.fromTranslation(sceneRootTransforms[1], sceneDeltaTranslate);
 
             // center
             s = 1.0 / Math.max( curScene.boundingBox.transform[0], Math.max(curScene.boundingBox.transform[5], curScene.boundingBox.transform[10]) );
@@ -378,6 +393,7 @@
 
             vec3.set(translate, 0, 0, -1.5);
             s = 1;
+
 
 
             // -- Initialize vertex array
@@ -462,7 +478,7 @@
                     // for (attribute in primitive.attributes) {
                     //     accessor = glTF.accessors[ primitive.attributes[attribute] ];
                     // }
-                    accessor = glTF.accessors[ primitive.attributes['POSITION'] ];
+                    accessor = glTF.accessors[ primitive.attributes.POSITION ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
                         // bufferView.target = gl.ARRAY_BUFFER;
@@ -482,7 +498,7 @@
                         );
                     gl.enableVertexAttribArray(POSITION_LOCATION);
 
-                    accessor = glTF.accessors[ primitive.attributes['NORMAL'] ];
+                    accessor = glTF.accessors[ primitive.attributes.NORMAL ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
                         // bufferView.target = gl.ARRAY_BUFFER;
@@ -503,8 +519,8 @@
                     gl.enableVertexAttribArray(NORMAL_LOCATION);
 
                     // @tmp, should consider together with material
-                    if (primitive.attributes['TEXCOORD_0'] !== undefined) {
-                        accessor = glTF.accessors[ primitive.attributes['TEXCOORD_0'] ];
+                    if (primitive.attributes.TEXCOORD_0 !== undefined) {
+                        accessor = glTF.accessors[ primitive.attributes.TEXCOORD_0 ];
                         bufferView = accessor.bufferView;
                         if (bufferView.target === null) {
                             // bufferView.target = gl.ARRAY_BUFFER;
@@ -713,11 +729,13 @@
 
                 drawScene(curScene);
 
+                // drawScene(curScene, sceneRootTransforms[1]);
+
                 if (drawBoundingBox) {
                     gl.useProgram(BOUNDING_BOX.program);
                     gl.bindVertexArray(BOUNDING_BOX.vertexArray);
 
-                    var node, mesh;
+                    var node, mesh, bbox;
                     // @temp: assume all nodes are in cur scene
                     // @potential fix: can label each node's scene at the setup
                     for (i = 0, len = glTF.nodes.length; i < len; i++) {
@@ -725,13 +743,20 @@
                         if (node.mesh !== null) {
                             // mesh = glTF.meshes[node.mesh];
                             mesh = node.mesh;
-                            mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
-                            mat4.mul(localMVP, VP, localMVP);
+
+                            if (isBoundingBoxAABB) {
+                                // aabb
+                                mat4.mul(localMVP, VP, node.aabb.transform);
+                            } else {
+                                // obb
+                                mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
+                                mat4.mul(localMVP, VP, localMVP);
+                            }
 
                             gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-                            
+                                
                             gl.drawArrays(gl.LINES, 0, 24);
-                            
+
                         }   
                     }
 
