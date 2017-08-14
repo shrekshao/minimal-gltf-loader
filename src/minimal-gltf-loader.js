@@ -6,7 +6,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var Scene = MinimalGLTFLoader.Scene = function () {
         this.nodes = [];    // root node id of this scene, reference to glTFModel.nodes
 
-        this.boundingBox = null;
+        this.boundingBox = null;    // actually a bvh
     };
 
     /**
@@ -147,6 +147,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // this.scenes = [];
 
         this.aabb = null;   // axis aligned bounding box, not need to apply node transform to aabb
+
+        // this.bvh = null;    // bbox of all children, used for (occlusion culling)
+        this.bvh = new BoundingBox();
     };
 
     Node.prototype.traverse = function(parent, executeFunc) {
@@ -154,6 +157,21 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         for (var i = 0, len = this.children.length; i < len; i++) {
             this.children[i].traverse(this, executeFunc);
         }
+    };
+
+    Node.prototype.traversePostOrder = function(parent, executeFunc) {
+        for (var i = 0, len = this.children.length; i < len; i++) {
+            this.children[i].traversePostOrder(this, executeFunc);
+        }
+        executeFunc(this, parent);
+    };
+
+    Node.prototype.traverseTwoExecFun = function(parent, execFunPre, execFunPos) {
+        execFunPre(this, parent);
+        for (var i = 0, len = this.children.length; i < len; i++) {
+            this.children[i].traverseTwoExecFun(this, execFunPre, execFunPos);
+        }
+        execFunPos(this, parent);
     };
 
 
@@ -762,7 +780,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         
         for (i = 0, leni = this.glTF.meshes.length; i < leni; i++) {
             mesh = this.glTF.meshes[i];
-            mesh.boundingBox = new BoundingBox( vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY), false );
+            // mesh.boundingBox = new BoundingBox( vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY), false );
+            mesh.boundingBox = new BoundingBox();
             
             for (j = 0, lenj = mesh.primitives.length; j < lenj; j++) {
                 primitive = mesh.primitives[j];
@@ -801,56 +820,81 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
         // scene Bounding box
-        // var tmpVec4a = vec4.create();
-        // var tmpVec4b = vec4.create();
-        // var tmpVec3a = vec3.create();
-        // var tmpVec3b = vec3.create();
-        // var tmpMat4 = mat4.create();
         var nodeMatrix = new Array(this.glTF.nodes.length);
         for(i = 0, leni = nodeMatrix.length; i < leni; i++) {
             nodeMatrix[i] = mat4.create();
         }
 
-        function execUpdateBBox(n, parent){
+        function execUpdateTransform(n, parent) {
             var tmpMat4 = nodeMatrix[n.nodeID];
+
             if (parent !== null) {
                 mat4.mul(tmpMat4, nodeMatrix[parent.nodeID], n.matrix);
             } else {
                 mat4.copy(tmpMat4, n.matrix);
             }
-            
-            
+        }
+
+        function execUpdateBBox(n, parent){
+            var tmpMat4 = nodeMatrix[n.nodeID];
+            var parentBVH;
+
+            if (parent !== null) {
+                parentBVH = parent.bvh;
+            } else {
+                parentBVH = scene.boundingBox;
+            }
+
             if (n.mesh) {
                 mesh = n.mesh;
                 if (mesh.boundingBox) {
 
                     n.aabb = BoundingBox.getAABBFromOBB(mesh.boundingBox, tmpMat4);
 
-                    vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
-                    vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
+                    // vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
+                    // vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
+                    
+                    // vec3.min(parentBVH.min, parentBVH.min, n.aabb.min);
+                    // vec3.max(parentBVH.max, parentBVH.max, n.aabb.max);
 
+                    if (n.children.length === 0) {
+                        // n.bvh = n.aabb;
+                        vec3.copy(n.bvh.min, n.aabb.min);
+                        vec3.copy(n.bvh.max, n.aabb.max);
+                    }
                 }
             }
+
+            vec3.min(parentBVH.min, parentBVH.min, n.bvh.min);
+            vec3.max(parentBVH.max, parentBVH.max, n.bvh.max);
         }
 
 
         for (i = 0, leni = this.glTF.scenes.length; i < leni; i++) {
             scene = this.glTF.scenes[i];
-            scene.boundingBox = new BoundingBox(
-                vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), 
-                vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY),
-                false
-            );
+            // scene.boundingBox = new BoundingBox(
+            //     vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), 
+            //     vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY),
+            //     false
+            // );
+            scene.boundingBox = new BoundingBox();
 
 
-            // @todo: !! this is not AABB, but an AABB after rotation.. this update is not correct...
             for (j = 0, lenj = scene.nodes.length; j < lenj; j++) {
                 node = scene.nodes[j];
-                // mat4.identity(tmpMat4);
-                node.traverse(null, execUpdateBBox);
+                // node.traverse(null, execUpdateBBox);
+                node.traverseTwoExecFun(null, execUpdateTransform, execUpdateBBox);
             }
 
             scene.boundingBox.calculateTransform();
+        }
+
+
+        for (j = 0, lenj = this.glTF.nodes.length; j < lenj; j++) {
+            node = this.glTF.nodes[j];
+            if (node.bvh != null) {
+                node.bvh.calculateTransform();
+            }
         }
 
 

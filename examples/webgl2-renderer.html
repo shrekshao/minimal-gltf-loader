@@ -29,6 +29,7 @@
         Bounding Box type: <select id="bbox-type">
             <option value="aabb">AABB</option>
             <option value="obb">OBB</option>
+            <option value="bvh">BVH</option>
         </select>
     </div>
 
@@ -181,14 +182,14 @@
         'use strict';
 
         var drawBoundingBox = true;
-        var isBoundingBoxAABB = true;    // false: obb
+        var boundingBoxType = 'aabb';    // false: obb
 
         document.getElementById("bbox-toggle").addEventListener("change", function() {
             drawBoundingBox = this.checked;
         });
 
         document.getElementById("bbox-type").addEventListener("change", function() {
-            isBoundingBoxAABB = this.value == 'aabb';
+            boundingBoxType = this.value;
         });
 
         var canvas = document.createElement('canvas');
@@ -740,13 +741,21 @@
                     // @potential fix: can label each node's scene at the setup
                     for (i = 0, len = glTF.nodes.length; i < len; i++) {
                         node = glTF.nodes[i];
-                        if (node.mesh !== null) {
+
+                        if (boundingBoxType == 'bvh') {
+                            // bvh
+                            mat4.mul(localMVP, VP, node.bvh.transform);
+                            gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+                            gl.drawArrays(gl.LINES, 0, 24);
+                        }
+                        else if (node.mesh !== null) {
                             // mesh = glTF.meshes[node.mesh];
                             mesh = node.mesh;
 
-                            if (isBoundingBoxAABB) {
+                            if (boundingBoxType == 'aabb') {
                                 // aabb
                                 mat4.mul(localMVP, VP, node.aabb.transform);
+                                // mat4.mul(localMVP, VP, node.bvh.transform);
                             } else {
                                 // obb
                                 mat4.mul(localMVP, nodeMatrix[i], mesh.boundingBox.transform);
