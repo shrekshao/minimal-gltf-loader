@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>WebGL 2 Renderer Example</title>
+    <title>Occlusion culling with hierarchy demo</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <link rel="stylesheet" href="style.css">
@@ -20,9 +20,9 @@
 </head>
 
 <body>
-    <div id="info">WebGL 2 Renderer Example</div>
+    <div id="info">Occlusion culling with hierarchy demo</div>
     <p id="description">
-        An example viewer of the model loaded by Minimal-glTF-Loader
+        https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter06.html
     </p>
     <div id="controls">
         Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked><br>
@@ -377,7 +377,7 @@
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
-        var glTFModelCount = 1;
+        var glTFModelCount = 3;
         var scenes = [];
 
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {

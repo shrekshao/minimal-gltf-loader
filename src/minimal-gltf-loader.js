@@ -4,7 +4,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
-        this.nodes = [];    // root node id of this scene, reference to glTFModel.nodes
+        this.nodes = [];    // root node object of this scene
 
         this.boundingBox = null;    // actually a bvh
     };
