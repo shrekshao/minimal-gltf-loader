@@ -14,9 +14,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
      * @param {vec3} min
      * @param {vec3} max
      */
-    var BoundingBox = MinimalGLTFLoader.BoundingBox = function (min, max) {
-        this.min = min;
-        this.max = max;
+    var BoundingBox = MinimalGLTFLoader.BoundingBox = function (min, max, isClone) {
+        // this.min = min;
+        // this.max = max;
+        min = min || vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+        max = max || vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+
+        if (isClone === undefined || isClone === true) {
+            this.min = vec3.clone(min);
+            this.max = vec3.clone(max);
+        } else {
+            this.min = min;
+            this.max = max;
+        }
+        
 
         this.transform = mat4.create();
     };
@@ -76,7 +87,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             vec3.max(transformBackward, tmpVec3a, tmpVec3b);
             vec3.add(max, max, transformBackward);
 
-            var bbox = new BoundingBox(min, max);
+            var bbox = new BoundingBox(min, max, false);
             bbox.calculateTransform();
             return bbox;
         });
@@ -751,7 +762,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         
         for (i = 0, leni = this.glTF.meshes.length; i < leni; i++) {
             mesh = this.glTF.meshes[i];
-            mesh.boundingBox = new BoundingBox( vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY) );
+            mesh.boundingBox = new BoundingBox( vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY), false );
             
             for (j = 0, lenj = mesh.primitives.length; j < lenj; j++) {
                 primitive = mesh.primitives[j];
@@ -765,7 +776,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                         if (accessor.type === 'VEC3') {
                             primitive.boundingBox = new BoundingBox(
                                 vec3.fromValues(accessor.min[0], accessor.min[1], accessor.min[2]),
-                                vec3.fromValues(accessor.max[0], accessor.max[1], accessor.max[2])
+                                vec3.fromValues(accessor.max[0], accessor.max[1], accessor.max[2]),
+                                false
                             );
                             primitive.boundingBox.calculateTransform();
                             
@@ -817,14 +829,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                     vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
                     vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
 
-                    // vec3.transformMat4(tmpVec3a, mesh.boundingBox.min, tmpMat4);
-                    // vec3.transformMat4(tmpVec3b, mesh.boundingBox.max, tmpMat4);
-
-                    // // scene.boundingBox.updateBoundingBox(mesh.boundingBox);
-                    // vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3a);
-                    // vec3.min(scene.boundingBox.min, scene.boundingBox.min, tmpVec3b);
-                    // vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3b);
-                    // vec3.max(scene.boundingBox.max, scene.boundingBox.max, tmpVec3a);
                 }
             }
         }
@@ -834,7 +838,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             scene = this.glTF.scenes[i];
             scene.boundingBox = new BoundingBox(
                 vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY), 
-                vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY)
+                vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY),
+                false
             );
 
 
