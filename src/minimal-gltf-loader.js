@@ -892,7 +892,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         for (j = 0, lenj = this.glTF.nodes.length; j < lenj; j++) {
             node = this.glTF.nodes[j];
-            if (node.bvh != null) {
+            if (node.bvh !== null) {
                 node.bvh.calculateTransform();
             }
         }
