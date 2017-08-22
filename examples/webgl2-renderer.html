@@ -175,6 +175,40 @@
         }
     </script>
 
+    <script id="fs-texture-normal-map" type="x-shader/x-fragment">
+        #version 300 es
+        #define FRAG_COLOR_LOCATION 0
+
+        precision highp float;
+        precision highp int;
+
+        uniform vec4 u_baseColorFactor;
+        uniform sampler2D u_baseColorTexture;
+        uniform sampler2D u_normalTexture;
+
+        in vec3 v_normal;
+        in vec2 v_uv;
+
+        layout(location = FRAG_COLOR_LOCATION) out vec4 color;
+
+
+        vec3 applyNormalMap(vec3 geomnor, vec3 normap) {
+            normap = normap * 2.0 - 1.0;
+            vec3 up = normalize(vec3(0.001, 1, 0.001));
+            vec3 surftan = normalize(cross(geomnor, up));
+            vec3 surfbinor = cross(geomnor, surftan);
+            return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;
+        }
+
+        void main()
+        {
+            vec3 normal = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+            float intensity = dot(normal, vec3(0.0, 0.0, 1.0));
+            //float intensity = dot(normal, vec3(1.0, -1.0, 1.0) * 0.57735);
+            color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity; 
+        }
+    </script>
+
 
     <script>
     // var testNodeId = 0;
@@ -327,6 +361,18 @@
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
             uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
+        };
+
+        // @temp test
+        program = createProgram(gl, getShaderSource('vs-texture'), getShaderSource('fs-texture-normal-map'));
+        var programBaseTextureNormalMap = {
+            program: program,
+            uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
+            uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
+            uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
+            uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
+            // uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
+            uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture")
         };
 
         
@@ -638,10 +684,32 @@
                         }
 
                         if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-                            if (program != programBaseTexture) {
-                                gl.useProgram(programBaseTexture.program);
-                                program = programBaseTexture;
+                            if (primitive.material.normalTexture) {
+                                if (program != programBaseTextureNormalMap) {
+                                    gl.useProgram(programBaseTextureNormalMap.program);
+                                    program = programBaseTextureNormalMap;
+                                }
+
+                                gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
+                                var texture = glTF.textures[ primitive.material.normalTexture.index ];
+                                gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+                                var sampler;
+                                if (texture.sampler) {
+                                    sampler = texture.sampler.sampler;
+                                } else {
+                                    sampler = defaultSampler;
+                                }
+
+                                gl.bindSampler(primitive.material.normalTexture.index, sampler);
+                            } else {
+                                if (program != programBaseTexture) {
+                                    gl.useProgram(programBaseTexture.program);
+                                    program = programBaseTexture;
+                                }
                             }
+
+
+                            
                             gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
                             // gl.activeTexture(gl.TEXTURE1);
                             var texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
