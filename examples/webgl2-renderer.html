@@ -370,8 +370,8 @@
         // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
@@ -627,8 +627,8 @@
 
                 // @tmp: material
                 var baseColor = defaultColor;
-                if (primitive.material) {
-                    if (primitive.material.pbrMetallicRoughness !== undefined) {
+                if (primitive.material !== null) {
+                    if (primitive.material.pbrMetallicRoughness !== null) {
                         if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
                             baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
                             if (program != programBaseColor) {

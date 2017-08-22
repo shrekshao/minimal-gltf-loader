@@ -2,6 +2,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 (function() {
     'use strict';
 
+    var curGltfModel = null;
+
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
         this.nodes = [];    // root node object of this scene
@@ -195,8 +197,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.indicesLength = json.accessors[this.indices].count;
         this.indicesOffset = (json.accessors[this.indices].byteOffset || 0);
 
-        // temp
-        this.material = p.material !== undefined ? json.materials[p.material] : null;
+        // // temp
+        // this.material = p.material !== undefined ? json.materials[p.material] : null;
+        this.material = p.material !== undefined ? curGltfModel.materials[p.material] : null;
+
 
         this.mode = p.mode !== undefined ? p.mode : 4; // default: gl.TRIANGLES
 
@@ -271,9 +275,42 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     //     gl.bindSampler(i, this.sampler);
     // }
 
-    var Material = MinimalGLTFLoader.Material = function (m) {
+    var TextureInfo = MinimalGLTFLoader.TextureInfo = function (json) {
+        this.index = json.index;
+        this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
+    };
+
+    var PbrMetallicRoughness = MinimalGLTFLoader.PbrMetallicRoughness = function (json) {
+        this.baseColorFactor = json.baseColorFactor !== undefined ? json.baseColorFactor : [1, 1, 1, 1];
+        this.baseColorTexture = json.baseColorTexture !== undefined ? new TextureInfo(json.baseColorTexture): null;
+        this.metallicFactor = json.metallicFactor !== undefined ? json.metallicFactor : 1 ;
+        this.roughnessFactor = json.roughnessFactor !== undefined ? json.roughnessFactor : 1 ;
+        this.metallicRoughnessTexture = json.metallicRoughnessTexture !== undefined ? new TextureInfo(json.metallicRoughnessTexture): null;
 
     };
+
+    var NormalTextureInfo = MinimalGLTFLoader.NormalTextureInfo = function (json) {
+        this.index = json.index;
+        this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
+        this.scale = json.scale !== undefined ? json.scale : 1 ;
+    };
+
+    var Material = MinimalGLTFLoader.Material = function (m) {
+        this.name = m.name !== undefined ? m.name : null;
+        
+        this.pbrMetallicRoughness = m.pbrMetallicRoughness !== undefined ? m.pbrMetallicRoughness : null;
+        // this.normalTexture = m.normalTexture !== undefined ? m.normalTexture : null;
+        this.normalTexture = m.normalTexture !== undefined ? new NormalTextureInfo(m.normalTexture) : null;
+        this.occlusionTexture = m.occlusionTexture !== undefined ? m.occlusionTexture : null;
+        this.emissiveTexture = m.emissiveTexture !== undefined ? m.emissiveTexture : null;
+
+        this.emissiveFactor = m.emissiveFactor !== undefined ? m.emissiveFactor : [0, 0, 0];
+        this.alphaMode = m.alphaMode !== undefined ? m.alphaMode : "OPAQUE";
+        this.alphaCutoff = m.alphaCutoff !== undefined ? m.alphaCutoff : 0.5;
+        this.doubleSided = m.doubleSided || false;
+    };
+
+    
 
     /**
      * 
@@ -302,6 +339,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         if (gltf.meshes) {
             this.meshes = new Array(gltf.meshes.length);    // store mesh object
+        }
+
+        if (gltf.materials) {
+            this.materials = new Array(gltf.materials.length);  // store material object
         }
 
         // this.shaders = {};      //glTF 1.0, deprecated in 2.0 core
@@ -480,6 +521,13 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             for (i = 0, len = json.samplers.length; i < len; i++) {
                 this.glTF.samplers[i] = new Sampler(json.samplers[i]);
             } 
+        }
+
+        // load all materials
+        if (json.materials) {
+            for (i = 0, len = json.materials.length; i < len; i++) {
+                this.glTF.materials[i] = new Material(json.materials[i]);
+            }
         }
 
 
@@ -661,7 +709,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // Parse JSON string into object
             var json = JSON.parse(response);
 
-            loader.glTF = new glTFModel(json);
+            curGltfModel = loader.glTF = new glTFModel(json);
 
             var bid;
 
