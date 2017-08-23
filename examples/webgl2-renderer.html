@@ -203,9 +203,11 @@
         void main()
         {
             vec3 normal = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+
             float intensity = dot(normal, vec3(0.0, 0.0, 1.0));
-            //float intensity = dot(normal, vec3(1.0, -1.0, 1.0) * 0.57735);
-            color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity; 
+            color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity;
+            
+            //color = color * 0.0 + vec4(normal, 1.0);
         }
     </script>
 
@@ -690,6 +692,8 @@
                                     program = programBaseTextureNormalMap;
                                 }
 
+                                gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
+
                                 gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
                                 var texture = glTF.textures[ primitive.material.normalTexture.index ];
                                 gl.bindTexture(gl.TEXTURE_2D, texture.texture);
@@ -709,7 +713,7 @@
                             }
 
 
-                            
+                            gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
                             gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
                             // gl.activeTexture(gl.TEXTURE1);
                             var texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
