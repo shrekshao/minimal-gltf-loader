@@ -695,9 +695,8 @@
                                 gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
 
                                 gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
-                                var texture = glTF.textures[ primitive.material.normalTexture.index ];
+                                texture = glTF.textures[ primitive.material.normalTexture.index ];
                                 gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                var sampler;
                                 if (texture.sampler) {
                                     sampler = texture.sampler.sampler;
                                 } else {
@@ -716,9 +715,8 @@
                             gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
                             gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
                             // gl.activeTexture(gl.TEXTURE1);
-                            var texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
+                            texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
                             gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                            var sampler;
                             if (texture.sampler) {
                                 sampler = texture.sampler.sampler;
                             } else {
