@@ -145,6 +145,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // this.meshIDs = [];
         this.mesh = null;   // mesh object
 
+        this.skin = null;
 
         // this.scenes = [];
 
@@ -197,8 +198,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.indicesLength = json.accessors[this.indices].count;
         this.indicesOffset = (json.accessors[this.indices].byteOffset || 0);
 
-        // // temp
-        // this.material = p.material !== undefined ? json.materials[p.material] : null;
+
         this.material = p.material !== undefined ? curGltfModel.materials[p.material] : null;
 
 
@@ -311,6 +311,17 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
     
+    var Skin = MinimalGLTFLoader.Skin = function (s) {
+        this.name = s.name !== undefined ? s.name : null;
+
+        this.joints = s.joints;     // required, integer array (will be hooked to object in postprocess)
+        this.skeleton = s.skeleton !== undefined ? s.skeleton : null;
+        this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? s.inverseBindMatrices : null;
+    };
+
+
+
+
 
     /**
      * 
@@ -358,6 +369,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         if (gltf.images) {
             this.images = new Array(gltf.images.length);
+        }
+
+
+        if (gltf.skins) {
+            this.skins = new Array(gltf.skins.length);
         }
 
     };
