@@ -320,7 +320,28 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
+    var Animation = MinimalGLTFLoader.Animation = function (a) {
+        this.channels = a.channel;  //required, array of channel
+        this.samplers = a.samplers; // required, array
+        this.name = a.name !== undefined ? a.name : null;
+    };
 
+    var Target = MinimalGLTFLoader.Target = function (t) {
+        this.node = t.node !== undefined ? t.node : null ;  //id, to be hooked up to object later
+        this.path = t.path;     //required, string
+    };
+
+    var Channel = MinimalGLTFLoader.Channel = function (c) {
+        this.sampler = c.sampler;   //required, id of animation sampler
+        this.target = new Target(c.target);     //required
+    };
+
+    var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (s) {
+        this.input = s.input;   //required, int, id of accessor
+        this.output = s.output; //required, int, id of accessor
+        this.interpolation = s.interpolation !== undefined ? s.interpolation : "LINEAR" ;
+        
+    };
 
 
     /**
