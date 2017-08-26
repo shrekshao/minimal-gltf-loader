@@ -380,6 +380,7 @@
         
         // -- Mouse Behaviour
         var s = 1;
+        var eulerX = 0;
         // var s = 1;
         // var t = -100;
         var translate = vec3.create();
@@ -403,8 +404,9 @@
             
             var deltaY = newY - lastMouseY;
             
-            // s += deltaY / 1000;
-            s *= (1 + deltaY / 1000);
+            // s *= (1 + deltaY / 1000);
+
+            eulerX += -deltaY * 0.01;
             
             lastMouseY = newY;
         };
@@ -422,6 +424,10 @@
         var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
+
+        // var gltfUrl = '../glTFs/glTF_version_2/AnimatedTriangle/glTF/AnimatedTriangle.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/AnimatedCube/glTF/AnimatedCube.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -855,7 +861,10 @@
                 mat4.identity(modelView);
                 mat4.translate(modelView, modelView, translate);
                 r += rotationSpeedY;
+                
                 mat4.rotateY(modelView, modelView, r);
+                mat4.rotateX(modelView, modelView, eulerX);
+                
                 mat4.scale(modelView, modelView, scale);
                 mat4.mul(modelView, modelView, modelMatrix);
 
