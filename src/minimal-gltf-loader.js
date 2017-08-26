@@ -107,8 +107,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.type = a.type;     // required
         this.size = Type2NumOfComponent[this.type];
 
-        this.min = a.min;
-        this.max = a.max;
+        this.min = a.min;   // @tmp assume required for now (for bbox)
+        this.max = a.max;   // @tmp assume required for now (for bbox)
     };
 
     var BufferView = MinimalGLTFLoader.BufferView = function(bf, bufferData) {
@@ -141,6 +141,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var Node = MinimalGLTFLoader.Node = function (nodeID) {
         this.nodeID = nodeID;
         this.matrix = mat4.create();
+        
+        this.translation = null;
+        this.rotation = null;
+        this.scale = null;
+
         this.children = [];  // node object
         // this.meshIDs = [];
         this.mesh = null;   // mesh object
@@ -175,6 +180,35 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             this.children[i].traverseTwoExecFun(this, execFunPre, execFunPos);
         }
         execFunPos(this, parent);
+    };
+
+
+    var translationVec3 = vec3.create();
+    var rotationQuat = quat.create();
+    var scaleVec3 = vec3.create();
+    var TRSMatrix = mat4.create();
+
+    Node.prototype.getTransformMatrixFromTRS = function(translation, rotation, scale) {
+        if (translation) {
+            vec3.set(translationVec3, translation[0], translation[1], translation[2]);
+        } else {
+            vec3.set(translationVec3, 0, 0, 0);
+        }
+        
+        if (rotation) {
+            quat.set(rotationQuat, rotation[0], rotation[1], rotation[2], rotation[3]);
+        } else {
+            quat.set(rotationQuat, 0, 0, 0, 1);
+        }
+
+        if (scale) {
+            vec3.set(scaleVec3, scale[0], scale[1], scale[2]);
+        } else {
+            vec3.set(scaleVec3, 1, 1, 1);
+        }
+        
+        mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
+        mat4.scale(this.matrix, TRSMatrix, scaleVec3);
     };
 
 
@@ -320,19 +354,24 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
+
+
+    // animation has no potential plan for progressive rendering I guess
+    // so everything happens after all buffers are loaded
+
     var Target = MinimalGLTFLoader.Target = function (t) {
-        this.node = t.node !== undefined ? t.node : null ;  //id, to be hooked up to object later
+        this.nodeID = t.node !== undefined ? t.node : null ;  //id, to be hooked up to object later
         this.path = t.path;     //required, string
     };
 
-    var Channel = MinimalGLTFLoader.Channel = function (c) {
-        this.sampler = c.sampler;   //required, id of animation sampler
+    var Channel = MinimalGLTFLoader.Channel = function (c, animation) {
+        this.sampler = animation.samplers[c.sampler];   //required
         this.target = new Target(c.target);     //required
     };
 
     var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (s) {
-        this.input = s.input;   //required, int, id of accessor
-        this.output = s.output; //required, int, id of accessor
+        this.input = curGltfModel.accessors[s.input];   //required, accessor object
+        this.output = curGltfModel.accessors[s.output]; //required, accessor object
         this.interpolation = s.interpolation !== undefined ? s.interpolation : "LINEAR" ;
         
     };
@@ -342,16 +381,18 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         var i, len;
 
-        this.channels = [];     //required, array of channel
-
-        for (i = 0, len = a.channels.length; i < len; i++) {
-            this.channels[i] = new Channel(a.channels[i]);
-        }
+        
 
         this.samplers = []; // required, array of animation sampler
         
         for (i = 0, len = a.samplers.length; i < len; i++) {
             this.samplers[i] = new AnimationSampler(a.samplers[i]);
+        }
+
+        this.channels = [];     //required, array of channel
+        
+        for (i = 0, len = a.channels.length; i < len; i++) {
+            this.channels[i] = new Channel(a.channels[i], this);
         }
     };
 
@@ -650,10 +691,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
 
-    var translationVec3 = vec3.create();
-    var rotationQuat = quat.create();
-    var scaleVec3 = vec3.create();
-    var TRSMatrix = mat4.create();
+    
     
     glTFLoader.prototype._parseNode = function(json, nodeID) {
         if (this.glTF.nodes[nodeID] !== undefined) {
@@ -679,28 +717,12 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // mat4.multiply(curMatrix, matrix, curMatrix);
         } else {
             // translation, rotation, scale (TRS)
-            // TODO: these labels are optional
-            if (node.translation) {
-                vec3.set(translationVec3, node.translation[0], node.translation[1], node.translation[2]);
-            } else {
-                vec3.set(translationVec3, 0, 0, 0);
-            }
-            
-            if (node.rotation) {
-                quat.set(rotationQuat, node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]);
-            } else {
-                quat.set(rotationQuat, 0, 0, 0, 1);
-            }
 
-            if (node.scale) {
-                vec3.set(scaleVec3, node.scale[0], node.scale[1], node.scale[2]);
-            } else {
-                vec3.set(scaleVec3, 1, 1, 1);
-            }
-            
-            mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
-            mat4.scale(curMatrix, TRSMatrix, scaleVec3);
-            // mat4.multiply(curMatrix, matrix, curMatrix);
+            newNode.translation = node.translation !== undefined ? node.translation : null;
+            newNode.rotation = node.rotation !== undefined ? node.rotation : null;
+            newNode.scale = node.scale !== undefined ? node.scale : null;
+
+            newNode.getTransformMatrixFromTRS(newNode.translation, newNode.rotation, newNode.scale);
             
         }
 
