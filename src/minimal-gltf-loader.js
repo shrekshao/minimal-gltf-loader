@@ -320,12 +320,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
-    var Animation = MinimalGLTFLoader.Animation = function (a) {
-        this.channels = a.channel;  //required, array of channel
-        this.samplers = a.samplers; // required, array
-        this.name = a.name !== undefined ? a.name : null;
-    };
-
     var Target = MinimalGLTFLoader.Target = function (t) {
         this.node = t.node !== undefined ? t.node : null ;  //id, to be hooked up to object later
         this.path = t.path;     //required, string
@@ -341,6 +335,24 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.output = s.output; //required, int, id of accessor
         this.interpolation = s.interpolation !== undefined ? s.interpolation : "LINEAR" ;
         
+    };
+
+    var Animation = MinimalGLTFLoader.Animation = function (a) {
+        this.name = a.name !== undefined ? a.name : null;
+
+        var i, len;
+
+        this.channels = [];     //required, array of channel
+
+        for (i = 0, len = a.channels.length; i < len; i++) {
+            this.channels[i] = new Channel(a.channels[i]);
+        }
+
+        this.samplers = []; // required, array of animation sampler
+        
+        for (i = 0, len = a.samplers.length; i < len; i++) {
+            this.samplers[i] = new AnimationSampler(a.samplers[i]);
+        }
     };
 
 
@@ -395,6 +407,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         if (gltf.skins) {
             this.skins = new Array(gltf.skins.length);
+        }
+
+        if (gltf.animations) {
+            this.animations = new Array(gltf.animations.length);
         }
 
     };
@@ -566,6 +582,15 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 this.glTF.materials[i] = new Material(json.materials[i]);
             }
         }
+
+
+
+        if (json.skins) {
+            for (i = 0, len = json.skins.length; i < len; i++) {
+                this.glTF.skins[i] = new Skin(json.skins[i]);
+            }
+        }
+
 
 
         // Iterate through every scene
@@ -994,6 +1019,17 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 if (this.glTF.images && this.glTF.textures[i].source !== null) {
                     this.glTF.textures[i].source = this.glTF.images[ this.glTF.textures[i].source ];
                 }
+            }
+        }
+
+
+
+
+
+        // load animations (when all accessors are loaded correctly)
+        if (this.glTF.animations) {
+            for (i = 0, leni = this.glTF.animations.length; i < leni; i++) {
+                this.glTF.animations[i] = new Animation(this.glTF.json.animations[i]);
             }
         }
         
