@@ -400,6 +400,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         // @tmp: assume no stride
         var count = Type2NumOfComponent[this.output.type];
+
+        var v4lerp = count === 4 ? quat.slerp: vec4.lerp;
+
         var i = this.curIdx;
         var o = i * count;
         var on = o + count;
@@ -415,7 +418,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         switch(this.interpolation) {
             case 'LINEAR': 
-            vec4.lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.inputTypedArray[i]);
+            v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.inputTypedArray[i]);
             // this.curValue = this.outputTypedArray[this.curIdx] +
             //     (t - this.inputTypedArray[this.curIdx]) / 
             //     (this.inputTypedArray[this.curIdx + 1] - this.inputTypedArray[this.curIdx]) *
