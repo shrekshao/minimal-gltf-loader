@@ -411,7 +411,7 @@
             lastMouseY = newY;
         };
         window.onwheel = function(event) {
-            translate[2] += -event.deltaY * 0.01;
+            translate[2] += -event.deltaY * 0.004;
             // translate[2] *= 1 + (-event.deltaY * 0.01);
         };
 
@@ -425,8 +425,6 @@
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
-        // var gltfUrl = '../glTFs/glTF_version_2/AnimatedTriangle/glTF/AnimatedTriangle.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/AnimatedCube/glTF/AnimatedCube.gltf';
         var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
 
@@ -465,6 +463,8 @@
             translate[0] += - 0.5 * curScene.boundingBox.transform[0];
             translate[1] += - 0.5 * curScene.boundingBox.transform[5];
             translate[2] += - 0.5 * curScene.boundingBox.transform[10];
+
+            s *= 0.5;
 
             modelMatrix[0] = s;
             modelMatrix[5] = s;
