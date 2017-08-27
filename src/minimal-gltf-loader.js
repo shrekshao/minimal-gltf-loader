@@ -183,32 +183,32 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
-    var translationVec3 = vec3.create();
-    var rotationQuat = quat.create();
-    var scaleVec3 = vec3.create();
+    // var translationVec3 = vec3.create();
+    // var rotationQuat = quat.create();
+    // var scaleVec3 = vec3.create();
     var TRSMatrix = mat4.create();
 
     Node.prototype.getTransformMatrixFromTRS = function(translation, rotation, scale) {
-        if (translation) {
-            vec3.set(translationVec3, translation[0], translation[1], translation[2]);
-        } else {
-            vec3.set(translationVec3, 0, 0, 0);
-        }
-        
-        if (rotation) {
-            quat.set(rotationQuat, rotation[0], rotation[1], rotation[2], rotation[3]);
-        } else {
-            quat.set(rotationQuat, 0, 0, 0, 1);
-        }
 
-        if (scale) {
-            vec3.set(scaleVec3, scale[0], scale[1], scale[2]);
-        } else {
-            vec3.set(scaleVec3, 1, 1, 1);
-        }
-        
-        mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
-        mat4.scale(this.matrix, TRSMatrix, scaleVec3);
+        // this.translation = translation !== undefined ? translation : [0, 0, 0];
+        // this.rotation = rotation !== undefined ? rotation : [0, 0, 0, 1];
+        // this.scale = scale !== undefined ? scale : [1, 1, 1];
+        this.translation = translation !== undefined ? vec3.fromValues(translation[0], translation[1], translation[2]) : vec3.fromValues(0, 0, 0);
+        this.rotation = rotation !== undefined ? vec4.fromValues(rotation[0], rotation[1], rotation[2], rotation[3]) : vec4.fromValues(0, 0, 0, 1);
+        this.scale = scale !== undefined ? vec3.fromValues(scale[0], scale[1], scale[2]) : vec3.fromValues(1, 1, 1);
+
+        // vec3.set(translationVec3, this.translation[0], this.translation[1], this.translation[2]);
+        // quat.set(rotationQuat, this.rotation[0], this.rotation[1], this.rotation[2], this.rotation[3]);
+        // vec3.set(scaleVec3, this.scale[0], this.scale[1], this.scale[2]);
+        // mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
+        // mat4.scale(this.matrix, TRSMatrix, scaleVec3);
+
+        this.updateMatrixFromTRS();
+    };
+
+    Node.prototype.updateMatrixFromTRS = function() {
+        mat4.fromRotationTranslation(TRSMatrix, this.rotation, this.translation);
+        mat4.scale(this.matrix, TRSMatrix, this.scale);
     };
 
 
@@ -372,9 +372,63 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (s) {
         this.input = curGltfModel.accessors[s.input];   //required, accessor object
         this.output = curGltfModel.accessors[s.output]; //required, accessor object
-        this.interpolation = s.interpolation !== undefined ? s.interpolation : "LINEAR" ;
+
+        this.inputTypedArray = _getAccessorData(this.input);
+        this.outputTypedArray = _getAccessorData(this.output);
+
+        // "LINEAR"
+        // "STEP"
+        // "CATMULLROMSPLINE"
+        // "CUBICSPLINE"
+        this.interpolation = s.interpolation !== undefined ? s.interpolation : 'LINEAR' ;
         
+
+        // runtime status thing
+        this.curIdx = 0;
+        // this.curValue = 0;
+        this.curValue = vec4.create();
     };
+
+    var animationOutputValueVec4a = vec4.create();
+    var animationOutputValueVec4b = vec4.create();
+
+    AnimationSampler.prototype.getValue = function (t) {
+        var len = this.inputTypedArray.length;
+        while (this.curIdx < len - 1 && t >= this.inputTypedArray[this.curIdx + 1]) {
+            this.curIdx++;
+        }
+
+        // @tmp: assume no stride
+        var count = Type2NumOfComponent[this.output.type];
+        var i = this.curIdx;
+        var o = i * count;
+        var on = o + count;
+
+        // // @tmp
+        // vec4.set(animationOutputValueVec4a, this.outputTypedArray[o], this.outputTypedArray[o+1], this.outputTypedArray[o+2] , this.outputTypedArray[o+3]);
+        // vec4.set(animationOutputValueVec4b, this.outputTypedArray[on], this.outputTypedArray[on+1], this.outputTypedArray[on+2] , this.outputTypedArray[on+3]);
+
+        for (var j = 0; j < count; j++ ) {
+            animationOutputValueVec4a[j] = this.outputTypedArray[o + j];
+            animationOutputValueVec4b[j] = this.outputTypedArray[on + j];
+        }
+
+        switch(this.interpolation) {
+            case 'LINEAR': 
+            vec4.lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.inputTypedArray[i]);
+            // this.curValue = this.outputTypedArray[this.curIdx] +
+            //     (t - this.inputTypedArray[this.curIdx]) / 
+            //     (this.inputTypedArray[this.curIdx + 1] - this.inputTypedArray[this.curIdx]) *
+            //     (this.outputTypedArray[this.curIdx + 1] - this.outputTypedArray[this.curIdx])
+            // // !!! this is not correct, since it doesn't have to be scalar
+            break;
+
+            default:
+            break;
+        }
+    };
+
+
 
     var Animation = MinimalGLTFLoader.Animation = function (a) {
         this.name = a.name !== undefined ? a.name : null;
@@ -718,11 +772,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         } else {
             // translation, rotation, scale (TRS)
 
-            newNode.translation = node.translation !== undefined ? node.translation : null;
-            newNode.rotation = node.rotation !== undefined ? node.rotation : null;
-            newNode.scale = node.scale !== undefined ? node.scale : null;
+            
 
-            newNode.getTransformMatrixFromTRS(newNode.translation, newNode.rotation, newNode.scale);
+            newNode.getTransformMatrixFromTRS(node.translation, node.rotation, node.scale);
             
         }
 
@@ -1097,6 +1149,29 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     // ------ Scope limited private util functions---------------
+
+
+    // for animation use
+    function _arrayBuffer2TypedArray(buffer, byteOffset, countOfComponentType, componentType) {
+        switch(componentType) {
+            // @todo: finish
+            case 5122: return new Int16Array(buffer, byteOffset, countOfComponentType);
+            case 5123: return new Uint16Array(buffer, byteOffset, countOfComponentType);
+            case 5124: return new Int32Array(buffer, byteOffset, countOfComponentType);
+            case 5125: return new Uint32Array(buffer, byteOffset, countOfComponentType);
+            case 5126: return new Float32Array(buffer, byteOffset, countOfComponentType);
+            default: return null; 
+        }
+    }
+
+    function _getAccessorData(accessor) {
+        return _arrayBuffer2TypedArray(
+            accessor.bufferView.data, 
+            accessor.byteOffset, 
+            accessor.count * Type2NumOfComponent[accessor.type],
+            accessor.componentType
+            );
+    }
 
     function _getBaseUri(uri) {
         

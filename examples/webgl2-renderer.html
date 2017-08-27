@@ -27,9 +27,9 @@
     <div id="controls">
         Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked><br>
         Bounding Box type: <select id="bbox-type">
-            <option value="aabb">AABB</option>
             <option value="obb">OBB</option>
-            <option value="bvh">BVH</option>
+            <option value="aabb">AABB(static)</option>
+            <option value="bvh">BVH(static)</option>
         </select>
     </div>
 
@@ -218,7 +218,7 @@
         'use strict';
 
         var drawBoundingBox = true;
-        var boundingBoxType = 'aabb';    // false: obb
+        var boundingBoxType = 'obb';
 
         document.getElementById("bbox-toggle").addEventListener("change", function() {
             drawBoundingBox = this.checked;
@@ -421,13 +421,13 @@
         // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
         // var gltfUrl = '../glTFs/glTF_version_2/AnimatedTriangle/glTF/AnimatedTriangle.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/AnimatedCube/glTF/AnimatedCube.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -499,7 +499,19 @@
 
             var accessor, bufferView;
 
+            var animation, animationSampler, channel;
+
             program = programBaseColor;
+
+
+
+            // // animations typed array
+            // for (i = 0, len = glTF.animations.length; i < len; i++) {
+            //     animation = glTF.animations[i];
+
+                
+            // }
+
 
             // create buffers
             for (i = 0, len = glTF.bufferViews.length; i < len; i++) {
@@ -560,7 +572,6 @@
                     accessor = glTF.accessors[ primitive.attributes.POSITION ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
-                        // bufferView.target = gl.ARRAY_BUFFER;
                         gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                         gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                     } else {
@@ -580,7 +591,6 @@
                     accessor = glTF.accessors[ primitive.attributes.NORMAL ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
-                        // bufferView.target = gl.ARRAY_BUFFER;
                         gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                         gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                     } else {
@@ -602,7 +612,6 @@
                         accessor = glTF.accessors[ primitive.attributes.TEXCOORD_0 ];
                         bufferView = accessor.bufferView;
                         if (bufferView.target === null) {
-                            // bufferView.target = gl.ARRAY_BUFFER;
                             gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
                             gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                         } else {
@@ -625,7 +634,6 @@
                     accessor = glTF.accessors[ primitive.indices ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
-                        // bufferView.target = gl.ARRAY_BUFFER;
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
                         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
                     } else {
@@ -847,8 +855,66 @@
             }
             
 
+            var timeParameter = 0;
+
             // -- Render loop
             (function render() {
+                var i, len;
+                
+
+                // animation
+                if (glTF.animations) {
+                    var j, lenj;
+                    var node;
+
+                    for (i = 0, len = glTF.animations.length; i < len; i++) {
+                        animation = glTF.animations[i];
+                        for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
+                            animation.samplers[j].getValue(timeParameter);
+                        }
+
+                        for (j = 0, lenj = animation.channels.length; j < lenj; j++) {
+                            channel = animation.channels[j];
+                            animationSampler = channel.sampler;
+                            node = glTF.nodes[channel.target.nodeID];
+
+                            switch (channel.target.path) {
+                                case 'rotation':
+                                vec4.copy(node.rotation, animationSampler.curValue);
+                                break;
+
+                                case 'translation':
+                                vec3.copy(node.translation, animationSampler.curValue);
+                                break;
+
+                                case 'scale':
+                                vec3.copy(node.scale, animationSampler.curValue);
+                                break;
+                            }
+                            // switch (channel.target.path) {
+                            //     case 'rotation':
+                            //     vec4.copy(node.rotation, animationSampler.curValue);
+                            //     break;
+
+                            //     case 'translation':
+                            //     vec3.copy(node.translation, animationSampler.curValue);
+                            //     break;
+
+                            //     case 'scale':
+                            //     vec3.copy(node.scale, animationSampler.curValue);
+                            //     break;
+                            // }
+
+                            node.updateMatrixFromTRS();
+                            
+                        }
+                    }
+                }
+                
+
+
+
+
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -876,7 +942,7 @@
 
                 gl.useProgram(program.program);
 
-                for (var i = 0, len = scenes.length; i < len; i++) {
+                for (i = 0, len = scenes.length; i < len; i++) {
                     drawScene(scenes[i]);
                 }
 
@@ -897,6 +963,7 @@
                 }
 
                 requestAnimationFrame(render);
+                timeParameter += 0.01;
             })();
 
 
