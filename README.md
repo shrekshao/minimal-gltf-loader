@@ -16,6 +16,7 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 ## Loading Features
 
 * [x] Accessors
+    - [ ] Progressive loading / rendering
 * [x] Buffers
 * [x] BufferViews
 * [x] Images
@@ -25,7 +26,11 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 * [x] Samplers
 * [x] Textures
 * [x] ~~Shader Loader~~ (not part of the core of glTF 2.0)
-* [ ] Animations
+* [x] Animations
+    * Interpolations
+        - [x] LINEAR
+        - [ ] STEP
+        - [ ] CATMULLROMSPLINE
 * [ ] Cameras
 * [x] Materials
 * [ ] Skins
@@ -35,16 +40,17 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 * [x] glTF (.gltf) with separate resources: .bin (geometry, animation, skins), .glsl (shaders), and image files
 * [ ] glTF (.gltf) with embedded resources
 * [ ] Binary glTF (.glb) using the [KHR_binary_glTF](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_binary_glTF/README.md) extension
-* [ ] glTF (.gltf) using the [KHR_materials_common](https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_materials_common/README.md) extension
 
 ## Examples
 
 * [x] WebGL 2 simple renderer
     * [x] baseColorFactor
     * [x] baseColorTexture
-    * [ ] normalTexture
+    * [x] normalTexture
     * [ ] PBR
-    * [ ] Animation
+    * [x] Animation
+    * [ ] Skin
+    * [ ] Progressive rendering
     * [ ] Occlusion Culling experiment 
         * [x] Bounding Box
             * [x] AABB (Axis Aligned Bounding Box, *static)
