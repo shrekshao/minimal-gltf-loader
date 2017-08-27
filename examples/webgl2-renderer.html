@@ -428,6 +428,7 @@
         // var gltfUrl = '../glTFs/glTF_version_2/AnimatedTriangle/glTF/AnimatedTriangle.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/AnimatedCube/glTF/AnimatedCube.gltf';
         var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -963,7 +964,7 @@
                 }
 
                 requestAnimationFrame(render);
-                timeParameter += 0.001;
+                timeParameter += 0.01;
             })();
 
 

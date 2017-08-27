@@ -376,40 +376,52 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.inputTypedArray = _getAccessorData(this.input);
         this.outputTypedArray = _getAccessorData(this.output);
 
+
         // "LINEAR"
         // "STEP"
         // "CATMULLROMSPLINE"
         // "CUBICSPLINE"
         this.interpolation = s.interpolation !== undefined ? s.interpolation : 'LINEAR' ;
         
-
+        // ------- extra runtime info -----------
         // runtime status thing
         this.curIdx = 0;
         // this.curValue = 0;
         this.curValue = vec4.create();
+        this.inputMax = this.inputTypedArray[this.inputTypedArray.length - 1];
+
+        this.loopOffset = 0;
     };
 
     var animationOutputValueVec4a = vec4.create();
     var animationOutputValueVec4b = vec4.create();
 
     AnimationSampler.prototype.getValue = function (t) {
+        t -= this.loopOffset;
         var len = this.inputTypedArray.length;
-        while (this.curIdx < len - 1 && t >= this.inputTypedArray[this.curIdx + 1]) {
+        while (this.curIdx <= len - 2 && t >= this.inputTypedArray[this.curIdx + 1]) {
             this.curIdx++;
+        }
+
+
+        if (this.curIdx >= len - 1) {
+            // loop
+            
+            this.loopOffset += this.inputMax;
+            t -= this.inputMax;
+            this.curIdx = 0;
         }
 
         // @tmp: assume no stride
         var count = Type2NumOfComponent[this.output.type];
-
+        
         var v4lerp = count === 4 ? quat.slerp: vec4.lerp;
 
         var i = this.curIdx;
         var o = i * count;
         var on = o + count;
 
-        // // @tmp
-        // vec4.set(animationOutputValueVec4a, this.outputTypedArray[o], this.outputTypedArray[o+1], this.outputTypedArray[o+2] , this.outputTypedArray[o+3]);
-        // vec4.set(animationOutputValueVec4b, this.outputTypedArray[on], this.outputTypedArray[on+1], this.outputTypedArray[on+2] , this.outputTypedArray[on+3]);
+        var u = Math.max( 0, t - this.inputTypedArray[i] ) / (this.inputTypedArray[i+1] - this.inputTypedArray[i]);
 
         for (var j = 0; j < count; j++ ) {
             animationOutputValueVec4a[j] = this.outputTypedArray[o + j];
@@ -418,12 +430,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         switch(this.interpolation) {
             case 'LINEAR': 
-            v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.inputTypedArray[i]);
-            // this.curValue = this.outputTypedArray[this.curIdx] +
-            //     (t - this.inputTypedArray[this.curIdx]) / 
-            //     (this.inputTypedArray[this.curIdx + 1] - this.inputTypedArray[this.curIdx]) *
-            //     (this.outputTypedArray[this.curIdx + 1] - this.outputTypedArray[this.curIdx])
-            // // !!! this is not correct, since it doesn't have to be scalar
+            // v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.loopOffset - this.inputTypedArray[i]);
+            v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, u);
             break;
 
             default:
