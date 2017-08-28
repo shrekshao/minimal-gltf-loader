@@ -380,12 +380,15 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
             this.jointMatrix = [];  // for calculation
             this.jointMatrixUniformBuffer = null;
-            this.jointMatrixUnidormBufferData = _arrayBuffer2TypedArray(
-                this.inverseBindMatricesData, 
-                0, 
-                this.inverseBindMatricesData.length, 
-                this.inverseBindMatrices.componentType
-            );      // for copy to UBO
+            // this.jointMatrixUnidormBufferData = _arrayBuffer2TypedArray(
+            //     this.inverseBindMatricesData, 
+            //     0, 
+            //     this.inverseBindMatricesData.length, 
+            //     this.inverseBindMatrices.componentType
+            // );      // for copy to UBO
+
+            // @tmp: fixed length to coordinate with shader, for copy to UBO
+            this.jointMatrixUnidormBufferData = new Float32Array(20 * 16);
 
             for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
                 this.jointMatrix.push(mat4.fromValues(

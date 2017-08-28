@@ -168,7 +168,7 @@
 
         uniform JointMatrix
         {
-            mat4 matrix[3];
+            mat4 matrix[20];
         } u_jointMatrix;
 
         layout(location = POSITION_LOCATION) in vec3 position;
@@ -487,9 +487,9 @@
         // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
 
-        var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -630,6 +630,9 @@
                     skin = glTF.skins[i];
                     
                     skin.jointMatrixUniformBuffer = gl.createBuffer();
+
+                    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUniformBuffer);
+
                     gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
                     gl.bufferData(gl.UNIFORM_BUFFER, skin.jointMatrixUnidormBufferData, gl.DYNAMIC_DRAW);
                     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
@@ -676,6 +679,7 @@
                     setupAttribuite(primitive.attributes.JOINTS_0, JOINTS_0_LOCATION);
                     setupAttribuite(primitive.attributes.WEIGHTS_0, WEIGHTS_0_LOCATION);
 
+                    
 
                     // indices ( assume use indices )
                     if (primitive.indices !== undefined) {
@@ -746,7 +750,8 @@
                 var baseColor = defaultColor;
 
                 if (hasSkin) {
-
+                    // @tmp: assume material only use base color
+                    baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
                 } else {
 
                     if (primitive.material !== null) {
@@ -858,6 +863,10 @@
                         skin.jointMatrixUnidormBufferData.set(tmpMat4, i * 16);
                     }
 
+                    gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
+                    // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData, 0, skin.jointMatrixUnidormBufferData.length);
+
                     if (program != programSkinBaseColor) {
                         gl.useProgram(programSkinBaseColor.program);
                         program = programSkinBaseColor;
@@ -865,8 +874,7 @@
                         // @todo: uniform bind
                         gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
                     }
-                    gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
-                    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
+                    
                 }
 
 
