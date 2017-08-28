@@ -163,6 +163,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.mesh = null;   // mesh object
 
         this.skin = null;
+        this.jointID = null;
 
         // this.scenes = [];
 
@@ -361,18 +362,54 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.name = s.name !== undefined ? s.name : null;
 
         this.joints = new Array(s.joints.length);   // required
-        for (var i = 0, len = this.joints.length; i < len; i++) {
+        var i, len;
+        for (i = 0, len = this.joints.length; i < len; i++) {
             this.joints[i] = curGltfModel.nodes[s.joints[i]];
         }
 
         this.skeleton = s.skeleton !== undefined ? curGltfModel.nodes[s.skeleton] : null;
         this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? curGltfModel.accessors[s.inverseBindMatrices] : null;
 
+
+        // runtime
+
         if (this.inverseBindMatrices) {
             // should be a mat4
             this.inverseBindMatricesData = _getAccessorData(this.inverseBindMatrices);
             // this.inverseBindMatricesMat4 = mat4.fromValues(this.inverseBindMatricesData);
+
+            this.jointMatrix = [];  // for calculation
+            this.jointMatrixUniformBuffer = null;
+            this.jointMatrixUnidormBufferData = _arrayBuffer2TypedArray(
+                this.inverseBindMatricesData, 
+                0, 
+                this.inverseBindMatricesData.length, 
+                this.inverseBindMatrices.componentType
+            );      // for copy to UBO
+
+            for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
+                this.jointMatrix.push(mat4.fromValues(
+                    this.inverseBindMatricesData[i],
+                    this.inverseBindMatricesData[i + 1],
+                    this.inverseBindMatricesData[i + 2],
+                    this.inverseBindMatricesData[i + 3],
+                    this.inverseBindMatricesData[i + 4],
+                    this.inverseBindMatricesData[i + 5],
+                    this.inverseBindMatricesData[i + 6],
+                    this.inverseBindMatricesData[i + 7],
+                    this.inverseBindMatricesData[i + 8],
+                    this.inverseBindMatricesData[i + 9],
+                    this.inverseBindMatricesData[i + 10],
+                    this.inverseBindMatricesData[i + 11],
+                    this.inverseBindMatricesData[i + 12],
+                    this.inverseBindMatricesData[i + 13],
+                    this.inverseBindMatricesData[i + 14],
+                    this.inverseBindMatricesData[i + 15]
+                ));
+            }
         }
+
+
         
     };
 
@@ -1150,9 +1187,17 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
         }
 
+        var joints;
         if (this.glTF.skins) {
             for (i = 0, leni = this.glTF.skins.length; i < leni; i++) {
                 this.glTF.skins[i] = new Skin(this.glTF.json.skins[i]);
+                
+
+                joints = this.glTF.skins[i].joints;
+                for (j = 0, lenj = joints.length; j < lenj; j++) {
+                    // this.glTF.nodes[ joints[j] ].jointID = j;
+                    joints[j].jointID = j;
+                }
             } 
         }
 

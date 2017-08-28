@@ -25,7 +25,7 @@
         An example viewer of the model loaded by Minimal-glTF-Loader
     </p>
     <div id="controls">
-        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" checked><br>
+        Draw Bounding Box: <input id="bbox-toggle" type="checkbox" ><br>
         Bounding Box type: <select id="bbox-type">
             <option value="obb">OBB</option>
             <option value="aabb">AABB(static)</option>
@@ -166,29 +166,40 @@
         uniform mat4 u_MVP;
         uniform mat4 u_MVNormal;
 
-        // or use uniform block
-        uniform mat4 u_jointMatrix[12];
+        uniform JointMatrix
+        {
+            mat4 matrix[3];
+        } u_jointMatrix;
 
         layout(location = POSITION_LOCATION) in vec3 position;
         layout(location = NORMAL_LOCATION) in vec3 normal;
-        //layout(location = TEXCOORD_0_LOCATION) in vec2 uv;
-        layout(location = JOINTS_0_LOCATION) in ivec4 joint;
+        //layout(location = JOINTS_0_LOCATION) in uvec4 joint;
+        layout(location = JOINTS_0_LOCATION) in vec4 joint;
         layout(location = WEIGHTS_0_LOCATION) in vec4 weight;
 
         out vec3 v_normal;
-        out vec2 v_uv;
 
         void main()
         {
+            /*mat4 skinMatrix = 
+                weight.x * u_jointMatrix.matrix[joint.x] +
+                weight.y * u_jointMatrix.matrix[joint.y] +
+                weight.z * u_jointMatrix.matrix[joint.z] +
+                weight.w * u_jointMatrix.matrix[joint.w];*/
             mat4 skinMatrix = 
-                weight.x * u_jointMatrix[joint.x] +
-                weight.y * u_jointMatrix[joint.y] +
-                weight.z * u_jointMatrix[joint.z] +
-                weight.w * u_jointMatrix[joint.w];
+                weight.x * u_jointMatrix.matrix[int(joint.x)] +
+                weight.y * u_jointMatrix.matrix[int(joint.y)] +
+                weight.z * u_jointMatrix.matrix[int(joint.z)] +
+                weight.w * u_jointMatrix.matrix[int(joint.w)];
+            /*mat4 skinMatrix = 
+                weight.x * u_jointMatrix.matrix[0] +
+                weight.y * u_jointMatrix.matrix[1] +
+                weight.z * u_jointMatrix.matrix[2] +
+                weight.w * u_jointMatrix.matrix[3];*/
 
             v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);
-            //v_uv = uv;
             gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;
+            //gl_Position = u_MVP * skinMatrix * vec4(position + vec3(0.5, 0.0,0.0), 1.0) ;
         }
     </script>
 
@@ -256,7 +267,7 @@
     (function()  {
         'use strict';
 
-        var drawBoundingBox = true;
+        var drawBoundingBox = false;
         var boundingBoxType = 'obb';
 
         document.getElementById("bbox-toggle").addEventListener("change", function() {
@@ -421,7 +432,8 @@
             program: program,
             uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
             uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-            uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
+            uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
+            uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
         };
 
         
@@ -470,12 +482,12 @@
         // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
         // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
 
-        // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
 
@@ -494,6 +506,7 @@
             // var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
             // mat4.fromTranslation(sceneRootTransforms[1], sceneDeltaTranslate);
 
+
             var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
             var tmpVec3Translate = vec3.create();
 
@@ -503,9 +516,6 @@
                 mat4.fromTranslation(scenes[i].rootTransform, tmpVec3Translate);
             }
             
-            
-            
-
 
             // center
             s = 1.0 / Math.max( curScene.boundingBox.transform[0], Math.max(curScene.boundingBox.transform[5], curScene.boundingBox.transform[10]) );
@@ -555,6 +565,8 @@
 
             var animation, animationSampler, channel;
 
+            var skin;
+
             program = programBaseColor;
 
 
@@ -566,6 +578,7 @@
                 
             // }
 
+            
 
 
             // create buffers
@@ -606,6 +619,21 @@
                     sampler = glTF.samplers[i];
                     
                     sampler.createSampler(gl);
+                }
+            }
+
+            if (glTF.skins) {
+                gl.useProgram(programSkinBaseColor.program);
+                gl.uniformBlockBinding(programSkinBaseColor.program, programSkinBaseColor.uniformBlockIndexJointMatrix, 0);
+                // gl.useProgram(null);
+                for (i = 0, len = glTF.skins.length; i < len; i++) {
+                    skin = glTF.skins[i];
+                    
+                    skin.jointMatrixUniformBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
+                    gl.bufferData(gl.UNIFORM_BUFFER, skin.jointMatrixUnidormBufferData, gl.DYNAMIC_DRAW);
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
+                    gl.bindBuffer(gl.UNIFORM_BUFFER, null);
                 }
             }
 
@@ -697,7 +725,7 @@
 
             var hasIndices = true;
 
-            var hasSkin = false;
+            var hasSkin = true;
 
             // var nodeMatrix = new Array(glTF.nodes.length);
             // for(i = 0, len = nodeMatrix.length; i < len; i++) {
@@ -718,14 +746,9 @@
                 var baseColor = defaultColor;
 
                 if (hasSkin) {
-                    // @tmp: just use base color
-                    if (program != programSkinBaseColor) {
-                        gl.useProgram(programSkinBaseColor.program);
-                        program = programSkinBaseColor;
 
-                        // @todo: uniform bind
-                    }
                 } else {
+
                     if (primitive.material !== null) {
                         if (primitive.material.pbrMetallicRoughness !== null) {
                             if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
@@ -781,10 +804,8 @@
 
                         }
                     }
+
                 }
-
-
-                
 
                 gl.uniform4fv(program.uniformBaseColorFactorLocation, baseColor);
 
@@ -803,6 +824,8 @@
 
             // function drawMesh(mesh, matrix) {
             // }
+            var tmpMat4 = mat4.create();
+            var inverseTransformMat4 = mat4.create();
             
             function drawNode(node, nodeID, nodeMatrix, parentModelMatrix) {
                 var matrix = nodeMatrix[nodeID];
@@ -817,7 +840,33 @@
 
 
                 if (node.skin !== null) {
+                    // mesh node with skin
                     hasSkin = true;
+                    var skin = node.skin;
+                    var joints = node.skin.joints;
+                    var jointNode;
+
+                    mat4.invert(inverseTransformMat4, matrix);
+
+                    // @tmp: assume joint nodes are always in the front of the scene node list
+                    // so that their matrices are ready to use
+                    for (i = 0, len = joints.length; i < len; i++) {
+                        jointNode = joints[i];
+                        mat4.mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.jointMatrix[i]);
+                        mat4.mul(tmpMat4, inverseTransformMat4, tmpMat4);
+
+                        skin.jointMatrixUnidormBufferData.set(tmpMat4, i * 16);
+                    }
+
+                    if (program != programSkinBaseColor) {
+                        gl.useProgram(programSkinBaseColor.program);
+                        program = programSkinBaseColor;
+
+                        // @todo: uniform bind
+                        gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
+                    }
+                    gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
                 }
 
 
@@ -836,6 +885,10 @@
 
                     // BOUNDING_BOX.draw(mesh.boundingBox, matrix, modelView, perspective);
                     // gl.useProgram(program);
+                }
+                
+                if (node.skin !== null) {
+                    gl.bindBuffer(gl.UNIFORM_BUFFER, null);
                 }
                 
 
@@ -907,13 +960,11 @@
             // -- Render loop
             (function render() {
                 var i, len;
-                
+                var j, lenj;
+                var node;
 
                 // animation
                 if (glTF.animations) {
-                    var j, lenj;
-                    var node;
-
                     for (i = 0, len = glTF.animations.length; i < len; i++) {
                         animation = glTF.animations[i];
                         for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
@@ -957,6 +1008,22 @@
                         }
                     }
                 }
+
+
+
+
+                // // skins
+                // if (glTF.skins) {
+                //     var skin, joints, M;
+                //     for (i = 0, len = glTF.skins.length; i < len; i++) {
+                //         skin = glTF.skins[i];
+                //         joints = skin.joints;
+                //         for (j = 0, lenj = joints.length; j < lenj; j++) {
+                //             M = skin.jointMatrix[j];
+                //         }
+                //     }
+                // }
+
                 
 
 
