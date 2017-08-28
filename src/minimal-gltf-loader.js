@@ -111,6 +111,18 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.max = a.max;   // @tmp assume required for now (for bbox)
     };
 
+    Accessor.prototype.prepareVertexAttrib = function(location, gl) {
+        gl.vertexAttribPointer(
+            location,
+            this.size,
+            this.componentType,
+            this.normalized,
+            this.byteStride,
+            this.byteOffset
+            );
+        gl.enableVertexAttribArray(location);
+    };
+
     var BufferView = MinimalGLTFLoader.BufferView = function(bf, bufferData) {
         this.byteLength = bf.byteLength;    //required
         this.byteOffset = bf.byteOffset !== undefined ? bf.byteOffset : 0;
@@ -348,9 +360,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var Skin = MinimalGLTFLoader.Skin = function (s) {
         this.name = s.name !== undefined ? s.name : null;
 
-        this.joints = s.joints;     // required, integer array (will be hooked to object in postprocess)
-        this.skeleton = s.skeleton !== undefined ? s.skeleton : null;
-        this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? s.inverseBindMatrices : null;
+        this.joints = new Array(s.joints.length);   // required
+        for (var i = 0, len = this.joints.length; i < len; i++) {
+            this.joints[i] = curGltfModel.nodes[s.joints[i]];
+        }
+
+        this.skeleton = s.skeleton !== undefined ? curGltfModel.nodes[s.skeleton] : null;
+        this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? curGltfModel.accessors[s.inverseBindMatrices] : null;
+
+        if (this.inverseBindMatrices) {
+            // should be a mat4
+            this.inverseBindMatricesData = _getAccessorData(this.inverseBindMatrices);
+            // this.inverseBindMatricesMat4 = mat4.fromValues(this.inverseBindMatricesData);
+        }
+        
     };
 
 
@@ -765,7 +788,12 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         }
 
         var node = json.nodes[nodeID];
+
+        // @tmp, need refine (old structure code...)
         var newNode = new Node(nodeID);
+        newNode.skin = node.skin !== undefined ? node.skin : null;
+
+
         this.glTF.nodes[nodeID] = newNode;
 
         // parentNodeIdsArray.push(nodeID);
@@ -952,7 +980,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
     glTFLoader.prototype._postprocess = function () {
+        // if there's no plan for progressive loading (streaming)
+        // than simply everything should be placed here
+        
         console.log('finish loading all assets, do a second pass postprocess');
+        
 
         
         // @todo: ?? hook up pointers, get scene bounding box, etc.
@@ -1117,6 +1149,19 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
                 this.glTF.animations[i] = new Animation(this.glTF.json.animations[i]);
             }
         }
+
+        if (this.glTF.skins) {
+            for (i = 0, leni = this.glTF.skins.length; i < leni; i++) {
+                this.glTF.skins[i] = new Skin(this.glTF.json.skins[i]);
+            } 
+        }
+
+        for (i = 0, leni = this.glTF.nodes.length; i < leni; i++) {
+            node = this.glTF.nodes[i];
+            if (node.skin !== null) {
+                node.skin = this.glTF.skins[ node.skin ];
+            }
+        } 
         
 
     };

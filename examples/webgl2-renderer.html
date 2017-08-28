@@ -102,7 +102,6 @@
         void main()
         {
             color = vec4(v_normal, 1.0);
-            //color = vec4(1.0, 1.0, 1.0, 1.0);
         }
     </script>
 
@@ -130,7 +129,7 @@
         #version 300 es
         #define POSITION_LOCATION 0
         #define NORMAL_LOCATION 1
-        #define UV_LOCATION 2
+        #define TEXCOORD_0_LOCATION 2
 
         precision highp float;
         precision highp int;
@@ -140,7 +139,7 @@
 
         layout(location = POSITION_LOCATION) in vec3 position;
         layout(location = NORMAL_LOCATION) in vec3 normal;
-        layout(location = UV_LOCATION) in vec2 uv;
+        layout(location = TEXCOORD_0_LOCATION) in vec2 uv;
 
         out vec3 v_normal;
         out vec2 v_uv;
@@ -150,6 +149,46 @@
             v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);
             v_uv = uv;
             gl_Position = u_MVP * vec4(position, 1.0) ;
+        }
+    </script>
+
+    <script id="vs-skin-normal" type="x-shader/x-vertex">
+        #version 300 es
+        #define POSITION_LOCATION 0
+        #define NORMAL_LOCATION 1
+        #define TEXCOORD_0_LOCATION 2
+        #define JOINTS_0_LOCATION 3
+        #define WEIGHTS_0_LOCATION 4
+
+        precision highp float;
+        precision highp int;
+
+        uniform mat4 u_MVP;
+        uniform mat4 u_MVNormal;
+
+        // or use uniform block
+        uniform mat4 u_jointMatrix[12];
+
+        layout(location = POSITION_LOCATION) in vec3 position;
+        layout(location = NORMAL_LOCATION) in vec3 normal;
+        //layout(location = TEXCOORD_0_LOCATION) in vec2 uv;
+        layout(location = JOINTS_0_LOCATION) in ivec4 joint;
+        layout(location = WEIGHTS_0_LOCATION) in vec4 weight;
+
+        out vec3 v_normal;
+        out vec2 v_uv;
+
+        void main()
+        {
+            mat4 skinMatrix = 
+                weight.x * u_jointMatrix[joint.x] +
+                weight.y * u_jointMatrix[joint.y] +
+                weight.z * u_jointMatrix[joint.z] +
+                weight.w * u_jointMatrix[joint.w];
+
+            v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);
+            //v_uv = uv;
+            gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;
         }
     </script>
 
@@ -377,6 +416,14 @@
             uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture")
         };
 
+        program = createProgram(gl, getShaderSource('vs-skin-normal'), getShaderSource('fs-base-color'));
+        var programSkinBaseColor = {
+            program: program,
+            uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
+            uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
+            uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
+        };
+
         
         // -- Mouse Behaviour
         var s = 1;
@@ -423,10 +470,14 @@
         // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
-        var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
+
+        // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -480,6 +531,8 @@
             var POSITION_LOCATION = 0; // set with GLSL layout qualifier
             var NORMAL_LOCATION = 1; // set with GLSL layout qualifier
             var TEXCOORD_0_LOCATION = 2; // set with GLSL layout qualifier
+            var JOINTS_0_LOCATION = 3; // set with GLSL layout qualifier
+            var WEIGHTS_0_LOCATION = 4; // set with GLSL layout qualifier
 
             // var vertexArrayMaps = {};
             // var vertexArrayMaps = [];
@@ -512,6 +565,7 @@
 
                 
             // }
+
 
 
             // create buffers
@@ -555,6 +609,23 @@
                 }
             }
 
+
+
+            function setupAttribuite(attrib, location) {
+                if (attrib !== undefined) {
+                    var accessor = glTF.accessors[ attrib ];
+                    var bufferView = accessor.bufferView;
+                    if (bufferView.target === null) {
+                        // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
+                        gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
+                        gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
+                    } else {
+                        gl.bindBuffer(bufferView.target, bufferView.buffer);
+                    }
+                    accessor.prepareVertexAttrib(location, gl);
+                }
+            }
+
             // create vaos
             for (mid = 0, lenMeshes = glTF.meshes.length; mid < lenMeshes; mid++) {
                 mesh = glTF.meshes[mid];
@@ -566,80 +637,31 @@
                     primitive.vertexArray = vertexArray = gl.createVertexArray();
                     gl.bindVertexArray(vertexArray);
                     
-                    // attributes
-                    // for (attribute in primitive.attributes) {
-                    //     accessor = glTF.accessors[ primitive.attributes[attribute] ];
-                    // }
-                    accessor = glTF.accessors[ primitive.attributes.POSITION ];
-                    bufferView = accessor.bufferView;
-                    if (bufferView.target === null) {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
-                        gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                    } else {
-                        gl.bindBuffer(bufferView.target, bufferView.buffer);
-                    }
                     
-                    gl.vertexAttribPointer(
-                        POSITION_LOCATION,
-                        accessor.size,
-                        accessor.componentType,
-                        accessor.normalized,
-                        accessor.byteStride,
-                        accessor.byteOffset
-                        );
-                    gl.enableVertexAttribArray(POSITION_LOCATION);
-
-                    accessor = glTF.accessors[ primitive.attributes.NORMAL ];
-                    bufferView = accessor.bufferView;
-                    if (bufferView.target === null) {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
-                        gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                    } else {
-                        gl.bindBuffer(bufferView.target, bufferView.buffer);
-                    }
-                    
-                    gl.vertexAttribPointer(
-                        NORMAL_LOCATION,
-                        accessor.size,
-                        accessor.componentType,
-                        accessor.normalized,
-                        accessor.byteStride,
-                        accessor.byteOffset
-                        );
-                    gl.enableVertexAttribArray(NORMAL_LOCATION);
+                    setupAttribuite(primitive.attributes.POSITION, POSITION_LOCATION);
+                    setupAttribuite(primitive.attributes.NORMAL, NORMAL_LOCATION);
 
                     // @tmp, should consider together with material
-                    if (primitive.attributes.TEXCOORD_0 !== undefined) {
-                        accessor = glTF.accessors[ primitive.attributes.TEXCOORD_0 ];
-                        bufferView = accessor.bufferView;
-                        if (bufferView.target === null) {
-                            gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
-                            gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                        } else {
-                            gl.bindBuffer(bufferView.target, bufferView.buffer);
-                        }
-                        
-                        gl.vertexAttribPointer(
-                            TEXCOORD_0_LOCATION,
-                            accessor.size,
-                            accessor.componentType,
-                            accessor.normalized,
-                            accessor.byteStride,
-                            accessor.byteOffset
-                            );
-                        gl.enableVertexAttribArray(TEXCOORD_0_LOCATION);
-                    }
+                    setupAttribuite(primitive.attributes.TEXCOORD_0, TEXCOORD_0_LOCATION);
                     
 
+                    setupAttribuite(primitive.attributes.JOINTS_0, JOINTS_0_LOCATION);
+                    setupAttribuite(primitive.attributes.WEIGHTS_0, WEIGHTS_0_LOCATION);
+
+
                     // indices ( assume use indices )
-                    accessor = glTF.accessors[ primitive.indices ];
-                    bufferView = accessor.bufferView;
-                    if (bufferView.target === null) {
-                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
-                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                    } else {
-                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
+                    if (primitive.indices !== undefined) {
+                        accessor = glTF.accessors[ primitive.indices ];
+                        bufferView = accessor.bufferView;
+                        if (bufferView.target === null) {
+                            // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
+                            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
+                            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
+                        } else {
+                            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
+                        }
                     }
+                    
                     
 
                     gl.bindVertexArray(null);
@@ -673,6 +695,10 @@
 
             var VP = mat4.create();
 
+            var hasIndices = true;
+
+            var hasSkin = false;
+
             // var nodeMatrix = new Array(glTF.nodes.length);
             // for(i = 0, len = nodeMatrix.length; i < len; i++) {
             //     nodeMatrix[i] = mat4.create();
@@ -688,29 +714,59 @@
                 mat4.transpose(localMVNormal, localMVNormal);
 
 
-                // @tmp: material
+                // @tmp: program choice
                 var baseColor = defaultColor;
-                if (primitive.material !== null) {
-                    if (primitive.material.pbrMetallicRoughness !== null) {
-                        if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
-                            baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-                            if (program != programBaseColor) {
-                                gl.useProgram(programBaseColor.program);
-                                program = programBaseColor;
-                            }
-                        }
 
-                        if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-                            if (primitive.material.normalTexture) {
-                                if (program != programBaseTextureNormalMap) {
-                                    gl.useProgram(programBaseTextureNormalMap.program);
-                                    program = programBaseTextureNormalMap;
+                if (hasSkin) {
+                    // @tmp: just use base color
+                    if (program != programSkinBaseColor) {
+                        gl.useProgram(programSkinBaseColor.program);
+                        program = programSkinBaseColor;
+
+                        // @todo: uniform bind
+                    }
+                } else {
+                    if (primitive.material !== null) {
+                        if (primitive.material.pbrMetallicRoughness !== null) {
+                            if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
+                                baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
+                                if (program != programBaseColor) {
+                                    gl.useProgram(programBaseColor.program);
+                                    program = programBaseColor;
+                                }
+                            }
+
+                            if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
+                                if (primitive.material.normalTexture) {
+                                    if (program != programBaseTextureNormalMap) {
+                                        gl.useProgram(programBaseTextureNormalMap.program);
+                                        program = programBaseTextureNormalMap;
+                                    }
+
+                                    gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
+
+                                    gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
+                                    texture = glTF.textures[ primitive.material.normalTexture.index ];
+                                    gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+                                    if (texture.sampler) {
+                                        sampler = texture.sampler.sampler;
+                                    } else {
+                                        sampler = defaultSampler;
+                                    }
+
+                                    gl.bindSampler(primitive.material.normalTexture.index, sampler);
+                                } else {
+                                    if (program != programBaseTexture) {
+                                        gl.useProgram(programBaseTexture.program);
+                                        program = programBaseTexture;
+                                    }
                                 }
 
-                                gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
 
-                                gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
-                                texture = glTF.textures[ primitive.material.normalTexture.index ];
+                                gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
+                                gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
+                                // gl.activeTexture(gl.TEXTURE1);
+                                texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
                                 gl.bindTexture(gl.TEXTURE_2D, texture.texture);
                                 if (texture.sampler) {
                                     sampler = texture.sampler.sampler;
@@ -718,33 +774,17 @@
                                     sampler = defaultSampler;
                                 }
 
-                                gl.bindSampler(primitive.material.normalTexture.index, sampler);
-                            } else {
-                                if (program != programBaseTexture) {
-                                    gl.useProgram(programBaseTexture.program);
-                                    program = programBaseTexture;
-                                }
+                                gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
                             }
 
+                            
 
-                            gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            // gl.activeTexture(gl.TEXTURE1);
-                            texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
-                            gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                            if (texture.sampler) {
-                                sampler = texture.sampler.sampler;
-                            } else {
-                                sampler = defaultSampler;
-                            }
-
-                            gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
                         }
-
-                        
-
                     }
                 }
+
+
+                
 
                 gl.uniform4fv(program.uniformBaseColorFactorLocation, baseColor);
 
@@ -774,6 +814,12 @@
                     mat4.copy(matrix, node.matrix);
                 }
                 // mat4.mul(matrix, parentModelMatrix, node.matrix);
+
+
+                if (node.skin !== null) {
+                    hasSkin = true;
+                }
+
 
                 var i, len;
 
