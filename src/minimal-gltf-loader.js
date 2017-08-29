@@ -388,7 +388,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // );      // for copy to UBO
 
             // @tmp: fixed length to coordinate with shader, for copy to UBO
-            this.jointMatrixUnidormBufferData = new Float32Array(20 * 16);
+            this.jointMatrixUnidormBufferData = new Float32Array(32 * 16);
 
             for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
                 this.jointMatrix.push(mat4.fromValues(
