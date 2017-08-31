@@ -105,7 +105,7 @@
 
         void main()
         {
-            color = vec4(v_normal, 1.0);
+            color = vec4(gl_FrontFacing ? v_normal : -v_normal, 1.0);
         }
     </script>
 
@@ -124,7 +124,7 @@
 
         void main()
         {
-            float intensity = dot(v_normal, vec3(0.0, 0.0, 1.0));
+            float intensity = dot(gl_FrontFacing ? v_normal : -v_normal, vec3(0.0, 0.0, 1.0));
             color = u_baseColorFactor * intensity;
             color.a = 1.0;
         }
@@ -255,7 +255,7 @@
 
         void main()
         {
-            float intensity = dot(v_normal, vec3(0.0, 0.0, 1.0));
+            float intensity = dot(gl_FrontFacing ? v_normal : -v_normal, vec3(0.0, 0.0, 1.0));
             color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity; 
             color.a = 1.0;
         }
@@ -289,6 +289,7 @@
         void main()
         {
             vec3 normal = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+            normal = gl_FrontFacing ? normal : -normal;
 
             float intensity = dot(normal, vec3(0.0, 0.0, 1.0));
             color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity;
@@ -569,6 +570,8 @@
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/mrdoob/rome-gltf/master/files/models/black_soup/quadruped_wolf.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -578,6 +581,7 @@
         gl.enable(gl.CULL_FACE);
         gl.cullFace(gl.BACK);
         gl.frontFace(gl.CCW);
+        var isFaceCulling = true;
 
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
 
@@ -830,12 +834,26 @@
                 mat4.transpose(localMVNormal, localMVNormal);
 
 
+                if (primitive.material !== null) {
+                    if (primitive.material.doubleSided === isFaceCulling) {
+                        isFaceCulling = !primitive.material.doubleSided;
+                        if (isFaceCulling) {
+                            gl.enable(gl.CULL_FACE);
+                        } else {
+                            gl.disable(gl.CULL_FACE);
+                        }
+                    }
+                }
+                
+
                 // @tmp: program choice
                 // super ugly code
+
                 var baseColor = defaultColor;
 
                 if (hasSkin) {
                     if (primitive.material !== null) {
+
                         if (primitive.material.pbrMetallicRoughness !== null) {
                             if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
                                 baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
