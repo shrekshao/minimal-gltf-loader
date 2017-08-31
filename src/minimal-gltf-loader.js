@@ -358,8 +358,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
     
-    var Skin = MinimalGLTFLoader.Skin = function (gltf, s) {
+    var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
         this.name = s.name !== undefined ? s.name : null;
+        this.skinID = skinID;
 
         this.joints = new Array(s.joints.length);   // required
         var i, len;
@@ -371,8 +372,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? gltf.accessors[s.inverseBindMatrices] : null;
 
 
-        // runtime
-
+        // @tmp: runtime stuff should be taken care of renderer
+        // since glTF model should only store info
+        // runtime can have multiple instances of this glTF models
         if (this.inverseBindMatrices) {
             // should be a mat4
             this.inverseBindMatricesData = _getAccessorData(this.inverseBindMatrices);
@@ -1187,7 +1189,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         var joints;
         if (this.glTF.skins) {
             for (i = 0, leni = this.glTF.skins.length; i < leni; i++) {
-                this.glTF.skins[i] = new Skin(this.glTF, this.glTF.json.skins[i]);
+                this.glTF.skins[i] = new Skin(this.glTF, this.glTF.json.skins[i], i);
                 
 
                 joints = this.glTF.skins[i].joints;

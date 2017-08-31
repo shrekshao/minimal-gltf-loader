@@ -340,8 +340,23 @@
             this.rootTransform = mat4.create();
             // @temp, assume every node is in current scene
             this.nodeMatrix = new Array(glTF.nodes.length);
-            for(var i = 0, len = this.nodeMatrix.length; i < len; i++) {
+            var i, len;
+            for(i = 0, len = this.nodeMatrix.length; i < len; i++) {
                 this.nodeMatrix[i] = mat4.create();
+            }
+
+
+            if (glTF.skins) {
+                this.inverseSkeletonRootMatrix = new Array(glTF.skins.length);
+                this.inverseSkeletonRootMatrixReady = new Array(glTF.skins.length);
+                for(i = 0, len = this.inverseSkeletonRootMatrix.length; i < len; i++) {
+                    if (glTF.skins[i].skeleton) {
+                        this.inverseSkeletonRootMatrix[i] = mat4.create();
+                        this.inverseSkeletonRootMatrixReady[i] = false;
+                    } else {
+                        this.inverseSkeletonRootMatrix[i] = null;
+                    }
+                }
             }
         };
 
@@ -572,6 +587,7 @@
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -585,32 +601,32 @@
 
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
 
-            var curScene = glTF.scenes[glTF.defaultScene];
+            var curGltfScene = glTF.scenes[glTF.defaultScene];
 
             // // draw multiple copies of the glTF scene
             // // to build a relative complex scene for octree and occlusion query test
             // var sceneRootTransforms = [mat4.create(), mat4.create()];
-            // var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
+            // var sceneDeltaTranslate = vec3.fromValues(curGltfScene.boundingBox.transform[0] * 1.2, 0, 0);
             // mat4.fromTranslation(sceneRootTransforms[1], sceneDeltaTranslate);
 
 
-            var sceneDeltaTranslate = vec3.fromValues(curScene.boundingBox.transform[0] * 1.2, 0, 0);
+            var sceneDeltaTranslate = vec3.fromValues(curGltfScene.boundingBox.transform[0] * 1.2, 0, 0);
             var tmpVec3Translate = vec3.create();
 
             for (i = 0, len = glTFModelCount; i < len; i++) {
-                scenes.push(new Scene(curScene, glTF));
+                scenes.push(new Scene(curGltfScene, glTF));
                 vec3.scale(tmpVec3Translate, sceneDeltaTranslate, i);
                 mat4.fromTranslation(scenes[i].rootTransform, tmpVec3Translate);
             }
             
 
             // center
-            s = 1.0 / Math.max( curScene.boundingBox.transform[0], Math.max(curScene.boundingBox.transform[5], curScene.boundingBox.transform[10]) );
-            mat4.getTranslation(translate, curScene.boundingBox.transform);
+            s = 1.0 / Math.max( curGltfScene.boundingBox.transform[0], Math.max(curGltfScene.boundingBox.transform[5], curGltfScene.boundingBox.transform[10]) );
+            mat4.getTranslation(translate, curGltfScene.boundingBox.transform);
             vec3.scale(translate, translate, -1);
-            translate[0] += - 0.5 * curScene.boundingBox.transform[0];
-            translate[1] += - 0.5 * curScene.boundingBox.transform[5];
-            translate[2] += - 0.5 * curScene.boundingBox.transform[10];
+            translate[0] += - 0.5 * curGltfScene.boundingBox.transform[0];
+            translate[1] += - 0.5 * curGltfScene.boundingBox.transform[5];
+            translate[2] += - 0.5 * curGltfScene.boundingBox.transform[10];
 
             s *= 0.5;
 
@@ -653,6 +669,8 @@
             var animation, animationSampler, channel;
 
             var skin;
+
+            var curScene;   // runtime scene object (not gltf scene object)
 
             program = programBaseColor;
 
@@ -850,7 +868,7 @@
                 // super ugly code
 
                 var baseColor = defaultColor;
-
+                // hasSkin = false;
                 if (hasSkin) {
                     if (primitive.material !== null) {
 
@@ -966,7 +984,14 @@
             // }
             var tmpMat4 = mat4.create();
             var inverseTransformMat4 = mat4.create();
+            // var inverseSkeletonRootMat4 = mat4.create();
+            var inverseSkeletonRootMat4 = null;
             
+            // @todo: 
+            // in a real engine, it is better to simply parse the node tree stucture
+            // to compute transform matrices,
+            // then sort node array by material and render use a for loop
+            // to minimize context switch
             function drawNode(node, nodeID, nodeMatrix, parentModelMatrix) {
                 var matrix = nodeMatrix[nodeID];
                 
@@ -987,12 +1012,22 @@
                     var jointNode;
 
                     mat4.invert(inverseTransformMat4, matrix);
+                    if (skin.skeleton !== null) {
+                        if (curScene.inverseSkeletonRootMatrixReady[skin.skinID] === false) {
+                            curScene.inverseSkeletonRootMatrixReady[skin.skinID] = true;
+                            mat4.invert(curScene.inverseSkeletonRootMatrix[skin.skinID], nodeMatrix[skin.skeleton.nodeID]);
+                        }
+                        inverseSkeletonRootMat4 = curScene.inverseSkeletonRootMatrix[skin.skinID];
+                    }
 
                     // @tmp: assume joint nodes are always in the front of the scene node list
                     // so that their matrices are ready to use
                     for (i = 0, len = joints.length; i < len; i++) {
                         jointNode = joints[i];
                         mat4.mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.jointMatrix[i]);
+                        if (skin.skeleton !== null) {
+                            mat4.mul(tmpMat4, inverseSkeletonRootMat4, tmpMat4);
+                        }
                         mat4.mul(tmpMat4, inverseTransformMat4, tmpMat4);
 
                         skin.jointMatrixUnidormBufferData.set(tmpMat4, i * 16);
@@ -1197,13 +1232,7 @@
 
                 mat4.mul(modelView, modelView, modelMatrix);
 
-                mat4.rotateY(modelView, modelView, eulerY);
-                
-                
-
-
-                // mat4.perspective(perspective, 0.785, canvas.width / canvas.height, 0.1, translate[2] + curScene.boundingBox.transform[10]);
-
+                mat4.rotateY(modelView, modelView, eulerY); 
                 
 
                 mat4.mul(VP, perspective, modelView);
@@ -1211,11 +1240,9 @@
                 gl.useProgram(program.program);
 
                 for (i = 0, len = scenes.length; i < len; i++) {
+                    curScene = scenes[i];
                     drawScene(scenes[i]);
                 }
-
-                // drawScene(curScene);
-                // drawScene(curScene, sceneRootTransforms[1]);
 
                 if (drawBoundingBox) {
                     gl.useProgram(BOUNDING_BOX.program);
