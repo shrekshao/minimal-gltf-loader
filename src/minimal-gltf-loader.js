@@ -2,7 +2,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 (function() {
     'use strict';
 
-    var curGltfModel = null;
+    // var curGltfModel = null;
 
     // Data classes
     var Scene = MinimalGLTFLoader.Scene = function () {
@@ -233,7 +233,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.boundingBox = null;    // kind of function as an OBB
     };
 
-    var Primitive = MinimalGLTFLoader.Primitive = function (json, p) {
+    var Primitive = MinimalGLTFLoader.Primitive = function (gltf, p) {
         // <attribute name, accessor id>, required
         // get hook up with accessor object in _postprocessing
         this.attributes = p.attributes;
@@ -241,12 +241,12 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
         // temp
-        this.indicesComponentType = json.accessors[this.indices].componentType;
-        this.indicesLength = json.accessors[this.indices].count;
-        this.indicesOffset = (json.accessors[this.indices].byteOffset || 0);
+        this.indicesComponentType = gltf.json.accessors[this.indices].componentType;
+        this.indicesLength = gltf.json.accessors[this.indices].count;
+        this.indicesOffset = (gltf.json.accessors[this.indices].byteOffset || 0);
 
 
-        this.material = p.material !== undefined ? curGltfModel.materials[p.material] : null;
+        this.material = p.material !== undefined ? gltf.materials[p.material] : null;
 
 
         this.mode = p.mode !== undefined ? p.mode : 4; // default: gl.TRIANGLES
@@ -358,17 +358,17 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
     
-    var Skin = MinimalGLTFLoader.Skin = function (s) {
+    var Skin = MinimalGLTFLoader.Skin = function (gltf, s) {
         this.name = s.name !== undefined ? s.name : null;
 
         this.joints = new Array(s.joints.length);   // required
         var i, len;
         for (i = 0, len = this.joints.length; i < len; i++) {
-            this.joints[i] = curGltfModel.nodes[s.joints[i]];
+            this.joints[i] = gltf.nodes[s.joints[i]];
         }
 
-        this.skeleton = s.skeleton !== undefined ? curGltfModel.nodes[s.skeleton] : null;
-        this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? curGltfModel.accessors[s.inverseBindMatrices] : null;
+        this.skeleton = s.skeleton !== undefined ? gltf.nodes[s.skeleton] : null;
+        this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? gltf.accessors[s.inverseBindMatrices] : null;
 
 
         // runtime
@@ -432,9 +432,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.target = new Target(c.target);     //required
     };
 
-    var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (s) {
-        this.input = curGltfModel.accessors[s.input];   //required, accessor object
-        this.output = curGltfModel.accessors[s.output]; //required, accessor object
+    var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (gltf, s) {
+        this.input = gltf.accessors[s.input];   //required, accessor object
+        this.output = gltf.accessors[s.output]; //required, accessor object
 
         this.inputTypedArray = _getAccessorData(this.input);
         this.outputTypedArray = _getAccessorData(this.output);
@@ -504,7 +504,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
 
-    var Animation = MinimalGLTFLoader.Animation = function (a) {
+    var Animation = MinimalGLTFLoader.Animation = function (gltf, a) {
         this.name = a.name !== undefined ? a.name : null;
 
         var i, len;
@@ -514,7 +514,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.samplers = []; // required, array of animation sampler
         
         for (i = 0, len = a.samplers.length; i < len; i++) {
-            this.samplers[i] = new AnimationSampler(a.samplers[i]);
+            this.samplers[i] = new AnimationSampler(gltf, a.samplers[i]);
         }
 
         this.channels = [];     //required, array of channel
@@ -754,13 +754,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
 
-        if (json.skins) {
-            for (i = 0, len = json.skins.length; i < len; i++) {
-                this.glTF.skins[i] = new Skin(json.skins[i]);
-            }
-        }
-
-
 
         // Iterate through every scene
         if (json.scenes) {
@@ -808,7 +801,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         for (var p = 0; p < primitiveLen; ++p) {
             primitive = primitives[p];
-            newMesh.primitives.push(new Primitive(json, primitive));
+            newMesh.primitives.push(new Primitive(this.glTF, primitive));
         }
 
         return newMesh;
@@ -924,7 +917,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             // Parse JSON string into object
             var json = JSON.parse(response);
 
-            curGltfModel = loader.glTF = new glTFModel(json);
+            // curGltfModel = loader.glTF = new glTFModel(json);
+            loader.glTF = new glTFModel(json);
 
             var bid;
 
@@ -1186,14 +1180,14 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // load animations (when all accessors are loaded correctly)
         if (this.glTF.animations) {
             for (i = 0, leni = this.glTF.animations.length; i < leni; i++) {
-                this.glTF.animations[i] = new Animation(this.glTF.json.animations[i]);
+                this.glTF.animations[i] = new Animation(this.glTF, this.glTF.json.animations[i]);
             }
         }
 
         var joints;
         if (this.glTF.skins) {
             for (i = 0, leni = this.glTF.skins.length; i < leni; i++) {
-                this.glTF.skins[i] = new Skin(this.glTF.json.skins[i]);
+                this.glTF.skins[i] = new Skin(this.glTF, this.glTF.json.skins[i]);
                 
 
                 joints = this.glTF.skins[i].joints;
