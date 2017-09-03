@@ -380,7 +380,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             this.inverseBindMatricesData = _getAccessorData(this.inverseBindMatrices);
             // this.inverseBindMatricesMat4 = mat4.fromValues(this.inverseBindMatricesData);
 
-            this.jointMatrix = [];  // for calculation
+            this.inverseBindMatrix = [];  // for calculation
             this.jointMatrixUniformBuffer = null;
             // this.jointMatrixUnidormBufferData = _arrayBuffer2TypedArray(
             //     this.inverseBindMatricesData, 
@@ -393,7 +393,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             this.jointMatrixUnidormBufferData = new Float32Array(32 * 16);
 
             for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
-                this.jointMatrix.push(mat4.fromValues(
+                this.inverseBindMatrix.push(mat4.fromValues(
                     this.inverseBindMatricesData[i],
                     this.inverseBindMatricesData[i + 1],
                     this.inverseBindMatricesData[i + 2],
