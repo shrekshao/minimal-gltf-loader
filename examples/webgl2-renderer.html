@@ -705,7 +705,7 @@
 
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-        var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
+        // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
 
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
@@ -713,7 +713,7 @@
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
-        // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
+        var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -864,7 +864,7 @@
                     
                     skin.jointMatrixUniformBuffer = gl.createBuffer();
 
-                    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUniformBuffer);
+                    gl.bindBufferBase(gl.UNIFORM_BUFFER, i, skin.jointMatrixUniformBuffer);
 
                     gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
                     gl.bufferData(gl.UNIFORM_BUFFER, skin.jointMatrixUnidormBufferData, gl.DYNAMIC_DRAW);
@@ -967,6 +967,7 @@
             var hasIndices = true;
 
             var hasSkin = false;
+            var skinID;     // same for uniform block binding id
 
             // var nodeMatrix = new Array(glTF.nodes.length);
             // for(i = 0, len = nodeMatrix.length; i < len; i++) {
@@ -1054,7 +1055,7 @@
                         }
                     }
 
-                    gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
+                    gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, skinID);
                 } else {
 
                     if (primitive.material !== null) {
@@ -1158,6 +1159,7 @@
                     // mesh node with skin
                     hasSkin = true;
                     var skin = node.skin;
+                    skinID = skin.skinID;
                     var joints = node.skin.joints;
                     var jointNode;
 

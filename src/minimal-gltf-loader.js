@@ -360,7 +360,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     
     var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
         this.name = s.name !== undefined ? s.name : null;
-        this.skinID = skinID;
+        this.skinID = skinID;   // use this for uniformblock id
 
         this.joints = new Array(s.joints.length);   // required
         var i, len;
