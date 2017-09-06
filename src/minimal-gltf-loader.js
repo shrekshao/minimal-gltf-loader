@@ -5,7 +5,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     // var curGltfModel = null;
 
     // Data classes
-    var Scene = MinimalGLTFLoader.Scene = function () {
+    var Scene = MinimalGLTFLoader.Scene = function (s) {
+        this.name = s.name !== undefined ? s.name : null;
         this.nodes = [];    // root node object of this scene
 
         this.boundingBox = null;    // actually a bvh
@@ -240,10 +241,17 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.indices = p.indices !== undefined ? p.indices : null;  // accessor id
 
 
-        // temp
-        this.indicesComponentType = gltf.json.accessors[this.indices].componentType;
-        this.indicesLength = gltf.json.accessors[this.indices].count;
-        this.indicesOffset = (gltf.json.accessors[this.indices].byteOffset || 0);
+        // @temp
+        if (this.indices !== null) {
+            this.indicesComponentType = gltf.json.accessors[this.indices].componentType;
+            this.indicesLength = gltf.json.accessors[this.indices].count;
+            this.indicesOffset = (gltf.json.accessors[this.indices].byteOffset || 0);
+        } else {
+            // assume 'POSITION' is there
+            this.drawArraysCount = gltf.json.accessors[this.attributes.POSITION].count;
+            this.drawArraysOffset = (gltf.json.accessors[this.attributes.POSITION].byteOffset || 0);
+        }
+        
 
 
         this.material = p.material !== undefined ? gltf.materials[p.material] : null;
@@ -345,7 +353,11 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     var Material = MinimalGLTFLoader.Material = function (m) {
         this.name = m.name !== undefined ? m.name : null;
         
-        this.pbrMetallicRoughness = m.pbrMetallicRoughness !== undefined ? m.pbrMetallicRoughness : null;
+        this.pbrMetallicRoughness = m.pbrMetallicRoughness !== undefined ? m.pbrMetallicRoughness : {
+            baseColorFactor: [1, 1, 1, 1],
+            metallicFactor: 1,
+            metallicRoughnessTexture: 1
+        };
         // this.normalTexture = m.normalTexture !== undefined ? m.normalTexture : null;
         this.normalTexture = m.normalTexture !== undefined ? new NormalTextureInfo(m.normalTexture) : null;
         this.occlusionTexture = m.occlusionTexture !== undefined ? m.occlusionTexture : null;
@@ -532,7 +544,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
      */
     var glTFModel = MinimalGLTFLoader.glTFModel = function (gltf) {
         this.json = gltf;
-        this.defaultScene = gltf.scene;
+        this.defaultScene = gltf.scene !== undefined ? gltf.scene : 0;
 
         this.version = Number(gltf.asset.version);
 
@@ -602,7 +614,8 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
         this._bufferRequested = 0;
         this._bufferLoaded = 0;
-        this._buffers = {};
+        // this._buffers = {};
+        this._buffers = [];
         this._bufferTasks = {};
 
 
@@ -761,7 +774,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         if (json.scenes) {
             // for (var sceneID in json.scenes) {
             for (var sceneID = 0, lenS = json.scenes.length; sceneID < lenS; sceneID ++) {
-                var newScene = new Scene();
+                var newScene = new Scene(json.scenes[sceneID]);
                 this.glTF.scenes[sceneID] = newScene;
 
                 var scene = json.scenes[sceneID];

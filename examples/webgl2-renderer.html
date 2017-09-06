@@ -69,6 +69,41 @@
         }
     </script>
 
+    <!-- totally temp -->
+    <script id="vs-plain" type="x-shader/x-vertex">
+        #version 300 es
+        #define POSITION_LOCATION 0
+
+        precision highp float;
+        precision highp int;
+
+        uniform mat4 u_MVP;
+
+        layout(location = POSITION_LOCATION) in vec3 position;
+
+        void main()
+        {
+            gl_Position = u_MVP * vec4(position, 1.0) ;
+        }
+    </script>
+
+    <script id="fs-plain" type="x-shader/x-fragment">
+        #version 300 es
+        #define FRAG_COLOR_LOCATION 0
+
+        precision highp float;
+        precision highp int;
+
+        uniform vec4 u_baseColorFactor;
+
+        layout(location = FRAG_COLOR_LOCATION) out vec4 color;
+
+        void main()
+        {
+            color = u_baseColorFactor;
+        }
+    </script>
+
     <script id="vs-normal" type="x-shader/x-vertex">
         #version 300 es
         #define POSITION_LOCATION 0
@@ -567,6 +602,13 @@
             uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
         };
 
+        program = createProgram(gl, getShaderSource('vs-plain'), getShaderSource('fs-plain'));
+        var programPlain = {
+            program: program,
+            uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
+            uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
+        };
+
         program = createProgram(gl, getShaderSource('vs-texture'), getShaderSource('fs-texture'));
         var programBaseTexture = {
             program: program,
@@ -705,7 +747,7 @@
 
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-        // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
+        var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
         // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
 
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
@@ -713,7 +755,12 @@
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
         // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
-        var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
+
+        // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Triangle/glTF/Triangle.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/cx20/gltf-test/master/tutorialModels/AnimatedTriangle/glTF/AnimatedTriangle.gltf';
+        // var gltfUrl = 'https://raw.githubusercontent.com/cx20/gltf-test/master/tutorialModels/SimpleMeshes/glTF/SimpleMeshes.gltf';
 
         var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
@@ -918,7 +965,7 @@
                     
 
                     // indices ( assume use indices )
-                    if (primitive.indices !== undefined) {
+                    if (primitive.indices !== null) {
                         accessor = glTF.accessors[ primitive.indices ];
                         bufferView = accessor.bufferView;
                         if (bufferView.target === null) {
@@ -975,6 +1022,10 @@
             // }
 
             var defaultColor = [1.0, 1.0, 1.0, 1.0];
+            var defaultMaterial = new MinimalGLTFLoader.Material({});
+
+            var hasNormal = true;
+
             function drawPrimitive(primitive, matrix) {
                 mat4.multiply(localMV, modelView, matrix);
                 mat4.multiply(localMVP, perspective, localMV);
@@ -983,10 +1034,11 @@
                 mat4.invert(localMVNormal, localMV);
                 mat4.transpose(localMVNormal, localMVNormal);
 
+                var material = primitive.material !== null ? primitive.material : defaultMaterial;
 
-                if (primitive.material !== null) {
-                    if (primitive.material.doubleSided === isFaceCulling) {
-                        isFaceCulling = !primitive.material.doubleSided;
+                if (material !== null) {
+                    if (material.doubleSided === isFaceCulling) {
+                        isFaceCulling = !material.doubleSided;
                         if (isFaceCulling) {
                             gl.enable(gl.CULL_FACE);
                         } else {
@@ -995,90 +1047,48 @@
                     }
                 }
                 
+                
 
                 // @tmp: program choice
                 // super ugly code
 
                 var baseColor = defaultColor;
-                // hasSkin = false;
-                if (hasSkin) {
-                    if (primitive.material !== null) {
 
-                        if (primitive.material.pbrMetallicRoughness !== null) {
-                            
-
-                            if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-
-                                if (primitive.attributes.JOINTS_1 === undefined) {
-                                    if (program != programSkinBaseTexture) {
-                                        gl.useProgram(programSkinBaseTexture.program);
-                                        program = programSkinBaseTexture;
-                                    }
-                                } else {
-                                    if (program != programSkinBaseTextureVec8) {
-                                        gl.useProgram(programSkinBaseTextureVec8.program);
-                                        program = programSkinBaseTextureVec8;
-                                    }
-                                }
-
-                                gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                                gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                                // gl.activeTexture(gl.TEXTURE1);
-                                texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
-                                gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                if (texture.sampler) {
-                                    sampler = texture.sampler.sampler;
-                                } else {
-                                    sampler = defaultSampler;
-                                }
-
-                                gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
-
-                                if (primitive.material.pbrMetallicRoughness.baseColorFactor) {
-                                    baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-                                }
-                            } else if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
-                                baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-
-                                if (primitive.attributes.JOINTS_1 === undefined) {
-                                    if (program != programSkinBaseColor) {
-                                        gl.useProgram(programSkinBaseColor.program);
-                                        program = programSkinBaseColor;
-                                    }
-                                } else {
-                                    if (program != programSkinBaseColorVec8) {
-                                        gl.useProgram(programSkinBaseColorVec8.program);
-                                        program = programSkinBaseColorVec8;
-                                    }
-                                }
-                            }
-                        }
+                if (primitive.attributes.NORMAL === undefined)
+                {
+                    if (program != programPlain) {
+                        gl.useProgram(programPlain.program);
+                        program = programPlain;
                     }
-
-                    gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, skinID);
+                    hasNormal = false;
                 } else {
+                    hasNormal = true;
 
-                    if (primitive.material !== null) {
-                        if (primitive.material.pbrMetallicRoughness !== null) {
-                            if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
-                                baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-                                if (program != programBaseColor) {
-                                    gl.useProgram(programBaseColor.program);
-                                    program = programBaseColor;
-                                }
-                            }
+                        // hasSkin = false;
+                    if (hasSkin) {
+                        if (material !== null) {
 
-                            if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-                                if (primitive.material.normalTexture) {
-                                    if (program != programBaseTextureNormalMap) {
-                                        gl.useProgram(programBaseTextureNormalMap.program);
-                                        program = programBaseTextureNormalMap;
+                            if (material.pbrMetallicRoughness !== null) {
+                                
+
+                                if ( material.pbrMetallicRoughness.baseColorTexture ) {
+
+                                    if (primitive.attributes.JOINTS_1 === undefined) {
+                                        if (program != programSkinBaseTexture) {
+                                            gl.useProgram(programSkinBaseTexture.program);
+                                            program = programSkinBaseTexture;
+                                        }
+                                    } else {
+                                        if (program != programSkinBaseTextureVec8) {
+                                            gl.useProgram(programSkinBaseTextureVec8.program);
+                                            program = programSkinBaseTextureVec8;
+                                        }
                                     }
 
-                                    gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
-
-                                    gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
-                                    texture = glTF.textures[ primitive.material.normalTexture.index ];
+                                    gl.uniform1i(program.uniformBaseColorTextureLocation, material.pbrMetallicRoughness.baseColorTexture.index);
+                                    gl.activeTexture(gl.TEXTURE0 + material.pbrMetallicRoughness.baseColorTexture.index);
+                                    // gl.activeTexture(gl.TEXTURE1);
+                                    texture = glTF.textures[ material.pbrMetallicRoughness.baseColorTexture.index ];
                                     gl.bindTexture(gl.TEXTURE_2D, texture.texture);
                                     if (texture.sampler) {
                                         sampler = texture.sampler.sampler;
@@ -1086,46 +1096,109 @@
                                         sampler = defaultSampler;
                                     }
 
-                                    gl.bindSampler(primitive.material.normalTexture.index, sampler);
-                                } else {
-                                    if (program != programBaseTexture) {
-                                        gl.useProgram(programBaseTexture.program);
-                                        program = programBaseTexture;
+                                    gl.bindSampler(material.pbrMetallicRoughness.baseColorTexture.index, sampler);
+
+                                    if (material.pbrMetallicRoughness.baseColorFactor) {
+                                        baseColor = material.pbrMetallicRoughness.baseColorFactor;
+                                    }
+                                } else if ( material.pbrMetallicRoughness.baseColorFactor ) {
+                                    baseColor = material.pbrMetallicRoughness.baseColorFactor;
+
+                                    if (primitive.attributes.JOINTS_1 === undefined) {
+                                        if (program != programSkinBaseColor) {
+                                            gl.useProgram(programSkinBaseColor.program);
+                                            program = programSkinBaseColor;
+                                        }
+                                    } else {
+                                        if (program != programSkinBaseColorVec8) {
+                                            gl.useProgram(programSkinBaseColorVec8.program);
+                                            program = programSkinBaseColorVec8;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, skinID);
+                    } else {
+
+                        if (material !== null) {
+                            if (material.pbrMetallicRoughness !== null) {
+                                if ( material.pbrMetallicRoughness.baseColorFactor ) {
+                                    baseColor = material.pbrMetallicRoughness.baseColorFactor;
+                                    if (program != programBaseColor) {
+                                        gl.useProgram(programBaseColor.program);
+                                        program = programBaseColor;
                                     }
                                 }
 
+                                if ( material.pbrMetallicRoughness.baseColorTexture ) {
+                                    if (material.normalTexture) {
+                                        if (program != programBaseTextureNormalMap) {
+                                            gl.useProgram(programBaseTextureNormalMap.program);
+                                            program = programBaseTextureNormalMap;
+                                        }
 
-                                gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                                gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                                // gl.activeTexture(gl.TEXTURE1);
-                                texture = glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
-                                gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                if (texture.sampler) {
-                                    sampler = texture.sampler.sampler;
-                                } else {
-                                    sampler = defaultSampler;
+                                        gl.uniform1i(program.uniformNormalTextureLocation, material.normalTexture.index);
+
+                                        gl.activeTexture(gl.TEXTURE0 + material.normalTexture.index);
+                                        texture = glTF.textures[ material.normalTexture.index ];
+                                        gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+                                        if (texture.sampler) {
+                                            sampler = texture.sampler.sampler;
+                                        } else {
+                                            sampler = defaultSampler;
+                                        }
+
+                                        gl.bindSampler(material.normalTexture.index, sampler);
+                                    } else {
+                                        if (program != programBaseTexture) {
+                                            gl.useProgram(programBaseTexture.program);
+                                            program = programBaseTexture;
+                                        }
+                                    }
+
+
+                                    gl.uniform1i(program.uniformBaseColorTextureLocation, material.pbrMetallicRoughness.baseColorTexture.index);
+                                    gl.activeTexture(gl.TEXTURE0 + material.pbrMetallicRoughness.baseColorTexture.index);
+                                    // gl.activeTexture(gl.TEXTURE1);
+                                    texture = glTF.textures[ material.pbrMetallicRoughness.baseColorTexture.index ];
+                                    gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+                                    if (texture.sampler) {
+                                        sampler = texture.sampler.sampler;
+                                    } else {
+                                        sampler = defaultSampler;
+                                    }
+
+                                    gl.bindSampler(material.pbrMetallicRoughness.baseColorTexture.index, sampler);
                                 }
 
-                                gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
+                                
+
                             }
-
-                            
-
                         }
-                    }
 
+                    }
                 }
+                
+                
 
                 gl.uniform4fv(program.uniformBaseColorFactorLocation, baseColor);
 
                 gl.uniformMatrix4fv(program.uniformMvpLocation, false, localMVP);
-                gl.uniformMatrix4fv(program.uniformMvNormalLocation, false, localMVNormal);
+                if (hasNormal) {
+                    gl.uniformMatrix4fv(program.uniformMvNormalLocation, false, localMVNormal);
+                }
+                
 
                 gl.bindVertexArray(primitive.vertexArray);
 
                 // TODO: when no indices, do drawArrays
-                gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
-                // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
+                if (primitive.indices !== null) {
+                    gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
+                } else {
+                    gl.drawArrays(primitive.mode, primitive.drawArraysOffset, primitive.drawArraysCount);
+                }
 
                 gl.bindVertexArray(null);
 
@@ -1135,7 +1208,6 @@
             // }
             var tmpMat4 = mat4.create();
             var inverseTransformMat4 = mat4.create();
-            // var inverseSkeletonRootMat4 = mat4.create();
             var inverseSkeletonRootMat4 = null;
             
             // @todo: 
