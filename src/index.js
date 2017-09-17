@@ -51,10 +51,12 @@ import '../css/style.css';
 
     window.loadImage = function(url, onload) {
         var img = new Image();
+        img.crossOrigin = "Anonymous";
         img.src = url;
-        img.onload = function() {
-            onload(img);
-        };
+        // img.onload = function() {
+        //     onload(img);
+        // };
+        img.onload = onload;
         return img;
     };
 
@@ -183,16 +185,16 @@ import '../css/style.css';
         draw: (function() {
             var MVP = mat4.create();
             return (function(bbox, nodeTransform, V, P) {
-                gl.useProgram(this.program);
+                // gl.useProgram(this.program);
 
                 mat4.mul(MVP, nodeTransform, bbox.transform);
                 mat4.mul(MVP, V, MVP);
                 mat4.mul(MVP, P, MVP);
 
                 gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
-                gl.bindVertexArray(this.vertexArray);
+                // gl.bindVertexArray(this.vertexArray);
                 gl.drawArrays(gl.LINES, 0, 24);
-                gl.bindVertexArray(null);
+                // gl.bindVertexArray(null);
             });
         })()
     };
@@ -220,6 +222,153 @@ import '../css/style.css';
     gl.enableVertexAttribArray(BOUNDING_BOX.positionLocation);
 
     gl.bindVertexArray(null);
+
+
+    // Environment maps
+    var CUBE_MAP = {
+
+        // loading asset --------------------
+        uris: [
+            '../textures/environment/px.jpg',
+            '../textures/environment/nx.jpg',
+            '../textures/environment/py.jpg',
+            '../textures/environment/ny.jpg',
+            '../textures/environment/pz.jpg',
+            '../textures/environment/nz.jpg',
+        ],
+
+        images: null,
+
+        loadAll: function() {
+            loadImages(this.uris, this.onloadAll.bind(this));
+        },
+
+        onloadAll: function(imgs) {
+            this.images = imgs;
+            console.log('all cube maps loaded');
+
+            this.texture = gl.createTexture();
+            
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+
+            for (var i = 0; i < 6; i++) {
+                gl.texImage2D(
+                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    gl.RGBA,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    this.images[i]
+                );
+            }
+
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+
+            if (this.finishLoadingCallback) {
+                this.finishLoadingCallback();
+            }
+        },
+
+        finishLoadingCallback: null,
+
+
+        // runtime stuffs -------------------------
+        vertexData: new Float32Array([         
+            -1.0,  1.0, -1.0,
+            -1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0,  1.0, -1.0,
+            -1.0,  1.0, -1.0,
+
+            -1.0, -1.0,  1.0,
+            -1.0, -1.0, -1.0,
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0,  1.0,
+            -1.0, -1.0,  1.0,
+
+            1.0, -1.0, -1.0,
+            1.0, -1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0, -1.0,
+            1.0, -1.0, -1.0,
+
+            -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0, -1.0,  1.0,
+            -1.0, -1.0,  1.0,
+
+            -1.0,  1.0, -1.0,
+            1.0,  1.0, -1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0,
+
+            -1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            1.0, -1.0,  1.0
+        ]),
+
+        texture: null,
+
+        vertexArray: gl.createVertexArray(),
+        vertexBuffer: gl.createBuffer(),
+
+        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
+        program: createProgram(gl, require('./shaders/vs-cube-map.glsl'), require('./shaders/fs-cube-map.glsl')),
+        positionLocation: 0,
+        uniformMvpLocation: 0, 
+        uniformEnvironmentLocation: 0,
+
+        
+        draw: (function() {
+            var MVP = mat4.create();
+            return (function(V, P) {
+                mat4.copy(MVP, V);
+                MVP[12] = 0.0;
+                MVP[13] = 0.0;
+                MVP[14] = 0.0;
+                MVP[15] = 1.0;
+                mat4.mul(MVP, P, MVP);
+
+                gl.useProgram(this.program);
+                gl.activeTexture(gl.TEXTURE0 + 8);
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
+                gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
+                gl.uniform1i(this.uniformEnvironmentLocation, 8);
+                gl.bindVertexArray(this.vertexArray);
+                gl.drawArrays(gl.TRIANGLES, 0, 36);
+                gl.bindVertexArray(null);
+            });
+        })()
+    };
+
+    CUBE_MAP.uniformMvpLocation = gl.getUniformLocation(CUBE_MAP.program, "u_MVP");
+    CUBE_MAP.uniformEnvironmentLocation = gl.getUniformLocation(CUBE_MAP.program, "u_environment");
+
+    gl.bindVertexArray(CUBE_MAP.vertexArray);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, CUBE_MAP.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, CUBE_MAP.vertexData, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(CUBE_MAP.positionLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(CUBE_MAP.positionLocation);
+
+    gl.bindVertexArray(null);
+
+
+
 
 
 
@@ -1041,17 +1190,15 @@ import '../css/style.css';
                 r += rotationSpeedY;
             }
             
-            
+
             mat4.rotateX(modelView, modelView, eulerX);
             mat4.rotateY(modelView, modelView, r);
-            
-            
             mat4.scale(modelView, modelView, scale);
-
-
+            
             mat4.mul(modelView, modelView, modelMatrix);
 
             mat4.rotateY(modelView, modelView, eulerY); 
+
             
 
             mat4.mul(VP, perspective, modelView);
@@ -1077,6 +1224,13 @@ import '../css/style.css';
                 gl.useProgram(program.program);
             }
 
+
+            // cube map
+
+            CUBE_MAP.draw(modelView, perspective);
+
+
+
             requestAnimationFrame(render);
             timeParameter += 0.01;
         }
@@ -1087,14 +1241,24 @@ import '../css/style.css';
 
 
 
-    glTFLoader.loadGLTF(gltfUrl, function(glTF) {
+    // glTFLoader.loadGLTF(gltfUrl, function(glTF) {
 
-        setupScene(glTF);
+    //     setupScene(glTF);
         
 
-        // render();
-        Renderer.render();
+    //     // render();
+    //     Renderer.render();
         
 
-    });
+    // });
+
+    CUBE_MAP.finishLoadingCallback = function() {
+        glTFLoader.loadGLTF(gltfUrl, function(glTF) {
+            setupScene(glTF);
+            Renderer.render();
+        });
+    };
+
+    CUBE_MAP.loadAll();
+
 })();
