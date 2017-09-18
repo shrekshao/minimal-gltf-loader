@@ -32,6 +32,7 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
         - [x] LINEAR
         - [ ] STEP
         - [ ] CATMULLROMSPLINE
+        - [ ] CUBICSPLINE
 * [ ] Cameras
 * [x] Materials
 * [x] Skins
@@ -48,10 +49,11 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
     * [x] baseColorFactor
     * [x] baseColorTexture
     * [x] normalTexture
+    * [x] Skybox
     * [ ] PBR
     * [x] Animation
-    * [ ] Skin
-    * [ ] Progressive rendering
+    * [x] Skin
+    * [ ] Progressive rendering (No plan for this)
     * [ ] Occlusion Culling experiment 
         * [x] Bounding Box
             * [x] AABB (Axis Aligned Bounding Box, *static)
@@ -66,3 +68,4 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
 * [glTF sample Model](https://github.com/KhronosGroup/glTF-Sample-Models)
 * Great thanks to Trung Le ([@trungtle](https://github.com/trungtle)) and Patrick Cozzi ([@pjcozzi](https://github.com/pjcozzi)) for contributing and advising. 
 * gl-Matrix by Brandon Jones ([@toji](https://github.com/toji)) and Colin MacKenzie IV ([@sinisterchipmunk](https://github.com/sinisterchipmunk))
+* [glTF-WebGL-PBR](https://github.com/KhronosGroup/glTF-WebGL-PBR)
