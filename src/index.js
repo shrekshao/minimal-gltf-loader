@@ -224,6 +224,27 @@ import '../css/style.css';
     gl.bindVertexArray(null);
 
 
+    var BRDF_LUT = {
+        texture: null,
+
+        createTexture: function (img) {
+            this.texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            gl.texImage2D(
+                gl.TEXTURE_2D,  // assumed
+                0,        // Level of details
+                // gl.RGB, // Format
+                // gl.RGB,
+                gl.RGBA, // Format
+                gl.RGBA,
+                gl.UNSIGNED_BYTE, // Size of each channel
+                img
+            );
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+    }
+
+
     // Environment maps
     var CUBE_MAP = {
 
@@ -235,6 +256,9 @@ import '../css/style.css';
             '../textures/environment/ny.jpg',
             '../textures/environment/pz.jpg',
             '../textures/environment/nz.jpg',
+
+            // @tmp, ugly, load brdfLUT here
+            '../textures/brdfLUT.png'
         ],
 
         images: null,
@@ -267,6 +291,9 @@ import '../css/style.css';
             }
 
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+
+            // @tmp
+            BRDF_LUT.createTexture(this.images[6]);
 
             if (this.finishLoadingCallback) {
                 this.finishLoadingCallback();
@@ -403,6 +430,32 @@ import '../css/style.css';
         uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture")
     };
 
+    // @temp PBR
+    program = createProgram(gl, require('./shaders/vs-pbr.glsl'), require('./shaders/fs-pbr.glsl'));
+    var programPBR = {
+        program: program,
+
+        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
+        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
+        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
+        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
+
+        uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
+        uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture"),
+
+        uniformDiffuseEnvSamplerLocation: gl.getUniformLocation(program, "u_DiffuseEnvSampler"),
+        uniformSpecularEnvSamplerLocation: gl.getUniformLocation(program, "u_SpecularEnvSampler"),
+        uniformBrdfLUTLocation: gl.getUniformLocation(program, "u_brdfLUT"),
+        
+        
+        uniformMetallicRoughnessTextureLocation: gl.getUniformLocation(program, "u_metallicRoughnessTexture"),
+        uniformMetallicFactorLocation: gl.getUniformLocation(program, "u_metallicFactor"),
+        uniformRoughnessFactorLocation: gl.getUniformLocation(program, "u_roughnessFactor"),
+
+        uniformOcclusionTextureLocation: gl.getUniformLocation(program, "u_occlusionTexture"),
+        uniformOcclusionStrengthLocation: gl.getUniformLocation(program, "u_occlusionStrength")
+    };
+
     program = createProgram(gl, require('./shaders/vs-skin-normal.glsl'), require('./shaders/fs-base-color.glsl'));
     var programSkinBaseColor = {
         program: program,
@@ -519,7 +572,7 @@ import '../css/style.css';
     // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
 
@@ -528,7 +581,7 @@ import '../css/style.css';
 
     // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-    var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
 
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';

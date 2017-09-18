@@ -12,6 +12,7 @@ uniform mat4 u_MVNormal;
 layout(location = POSITION_LOCATION) in vec3 position;
 layout(location = NORMAL_LOCATION) in vec3 normal;
 layout(location = TEXCOORD_0_LOCATION) in vec2 uv;
+// TODO: tangents
 
 out vec3 v_normal;
 out vec2 v_uv;
