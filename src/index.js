@@ -212,17 +212,6 @@ import '../css/style.css';
     // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_MODE, gl.NONE);
     // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
 
-    // @tmp test
-    var tmpSamplers = new Array(6);
-    var tmpSampler;
-    for (var k = 0; k < tmpSamplers.length; k++) {
-        tmpSampler = tmpSamplers[k] = gl.createSampler();
-        gl.samplerParameteri(tmpSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
-        gl.samplerParameteri(tmpSampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.samplerParameteri(tmpSampler, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.samplerParameteri(tmpSampler, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    }
-
 
 
 
@@ -257,8 +246,11 @@ import '../css/style.css';
                 gl.RGBA, // Format
                 gl.RGBA,
                 gl.UNSIGNED_BYTE, // Size of each channel
+                // gl.FLOAT,
                 img
             );
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.bindTexture(gl.TEXTURE_2D, null);
         }
     }
@@ -893,15 +885,12 @@ import '../css/style.css';
             gl.activeTexture(gl.TEXTURE0 + textureInfo.index);
             var texture = curScene.glTF.textures[ textureInfo.index ];
             gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-            // var sampler;
-            // if (texture.sampler) {
-            //     sampler = texture.sampler.sampler;
-            // } else {
-            //     sampler = defaultSampler;
-            // }
-
-            // test
-            var sampler = tmpSamplers[textureInfo.index];
+            var sampler;
+            if (texture.sampler) {
+                sampler = texture.sampler.sampler;
+            } else {
+                sampler = defaultSampler;
+            }
 
             gl.bindSampler(textureInfo.index, sampler);
         }
