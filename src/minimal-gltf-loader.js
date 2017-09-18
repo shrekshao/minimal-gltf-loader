@@ -446,7 +446,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.metallicFactor = json.metallicFactor !== undefined ? json.metallicFactor : 1 ;
         this.roughnessFactor = json.roughnessFactor !== undefined ? json.roughnessFactor : 1 ;
         this.metallicRoughnessTexture = json.metallicRoughnessTexture !== undefined ? new TextureInfo(json.metallicRoughnessTexture): null;
-
     };
 
     var NormalTextureInfo = MinimalGLTFLoader.NormalTextureInfo = function (json) {
@@ -455,18 +454,24 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.scale = json.scale !== undefined ? json.scale : 1 ;
     };
 
+    var OcclusionTextureInfo = MinimalGLTFLoader.OcclusionTextureInfo = function (json) {
+        this.index = json.index;
+        this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
+        this.strength = json.strength !== undefined ? json.strength : 1 ;
+    };
+
     var Material = MinimalGLTFLoader.Material = function (m) {
         this.name = m.name !== undefined ? m.name : null;
         
-        this.pbrMetallicRoughness = m.pbrMetallicRoughness !== undefined ? m.pbrMetallicRoughness : {
+        this.pbrMetallicRoughness = m.pbrMetallicRoughness !== undefined ? new PbrMetallicRoughness( m.pbrMetallicRoughness ) : new PbrMetallicRoughness({
             baseColorFactor: [1, 1, 1, 1],
             metallicFactor: 1,
             metallicRoughnessTexture: 1
-        };
+        });
         // this.normalTexture = m.normalTexture !== undefined ? m.normalTexture : null;
         this.normalTexture = m.normalTexture !== undefined ? new NormalTextureInfo(m.normalTexture) : null;
-        this.occlusionTexture = m.occlusionTexture !== undefined ? m.occlusionTexture : null;
-        this.emissiveTexture = m.emissiveTexture !== undefined ? m.emissiveTexture : null;
+        this.occlusionTexture = m.occlusionTexture !== undefined ? new OcclusionTextureInfo(m.occlusionTexture) : null;
+        this.emissiveTexture = m.emissiveTexture !== undefined ? new TextureInfo(m.emissiveTexture) : null;
 
         this.emissiveFactor = m.emissiveFactor !== undefined ? m.emissiveFactor : [0, 0, 0];
         this.alphaMode = m.alphaMode !== undefined ? m.alphaMode : "OPAQUE";
