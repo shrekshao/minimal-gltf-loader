@@ -73,16 +73,17 @@ const float c_MinRoughness = 0.04;
 
 vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 {
-    float mipCount = 9.0; // resolution of 512x512
+    // float mipCount = 9.0; // resolution of 512x512
+    float mipCount = 10.0; // resolution of 1024x1024
     float lod = (pbrInputs.perceptualRoughness * mipCount);
     // retrieve a scale and bias to F0. See [1], Figure 3
     vec3 brdf = texture(u_brdfLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;
     vec3 diffuseLight = texture(u_DiffuseEnvSampler, n).rgb;
 
 // #ifdef USE_TEX_LOD
-//     vec3 specularLight = textureCubeLodEXT(u_SpecularEnvSampler, reflection, lod).rgb;
+    vec3 specularLight = texture(u_SpecularEnvSampler, reflection, lod).rgb;
 // #else
-    vec3 specularLight = texture(u_SpecularEnvSampler, reflection).rgb;
+    // vec3 specularLight = texture(u_SpecularEnvSampler, reflection).rgb;
 // #endif
 
     vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;

@@ -233,7 +233,7 @@ import '../css/style.css';
 
     var BRDF_LUT = {
         texture: null,
-        textureIndex: 14,
+        textureIndex: 13,
 
         createTexture: function (img) {
             this.texture = gl.createTexture();
@@ -259,6 +259,11 @@ import '../css/style.css';
     // Environment maps
     var CUBE_MAP = {
         textureIndex: 15,
+        texture: null,
+
+        // IBL
+        textureIBLDiffuseIndex: 14,
+        textureIBLDiffuse: null,
 
         // loading asset --------------------
         uris: [
@@ -268,6 +273,14 @@ import '../css/style.css';
             '../textures/environment/ny.jpg',
             '../textures/environment/pz.jpg',
             '../textures/environment/nz.jpg',
+
+            // ibl diffuse
+            '../textures/environment/diffuse/bakedDiffuse_01.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_02.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_03.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_04.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_05.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_06.jpg',
 
             // @tmp, ugly, load brdfLUT here
             '../textures/brdfLUT.png'
@@ -284,7 +297,6 @@ import '../css/style.css';
             console.log('all cube maps loaded');
 
             this.texture = gl.createTexture();
-            
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -301,21 +313,48 @@ import '../css/style.css';
                     this.images[i]
                 );
             }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+
+
+
+            this.textureIBLDiffuse = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureIBLDiffuse);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+
+            for (var i = 0; i < 6; i++) {
+                gl.texImage2D(
+                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    gl.RGBA,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    this.images[i + 6]
+                );
+            }
 
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 
+
+
             // @tmp
-            BRDF_LUT.createTexture(this.images[6]);
+            BRDF_LUT.createTexture(this.images[this.images.length - 1]);
             // @hack
             gl.useProgram(programPBR.program);
             gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
             gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
             gl.uniform1i(programPBR.uniformBrdfLUTLocation, BRDF_LUT.textureIndex);
-
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
-            gl.uniform1i(programPBR.uniformDiffuseEnvSamplerLocation, CUBE_MAP.textureIndex);
             gl.uniform1i(programPBR.uniformSpecularEnvSamplerLocation, CUBE_MAP.textureIndex);
+            
+
+            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
+            gl.uniform1i(programPBR.uniformDiffuseEnvSamplerLocation, CUBE_MAP.textureIBLDiffuseIndex);
             gl.useProgram(null);
 
             if (this.finishLoadingCallback) {
@@ -371,7 +410,7 @@ import '../css/style.css';
             1.0, -1.0,  1.0
         ]),
 
-        texture: null,
+        
 
         vertexArray: gl.createVertexArray(),
         vertexBuffer: gl.createBuffer(),
@@ -617,6 +656,7 @@ import '../css/style.css';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/mrdoob/rome-gltf/master/files/models/black_soup/quadruped_wolf.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF/Buggy.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
@@ -1025,6 +1065,8 @@ import '../css/style.css';
                             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
                             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
 
+                            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
+                            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
 
                             if (pbrMetallicRoughness.baseColorFactor) {
                                 baseColor = pbrMetallicRoughness.baseColorFactor;
