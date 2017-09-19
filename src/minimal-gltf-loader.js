@@ -355,6 +355,9 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.indexBuffer = null;
 
 
+        this.program = null;
+
+
         this.boundingBox = null;
         if (this.attributes.POSITION !== undefined) {
             var accessor = this.attributes.POSITION;
