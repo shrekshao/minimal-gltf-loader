@@ -197,7 +197,11 @@ void main()
 
 
     // vec3 n = getNormal();                             // normal at surface point
+#ifdef HAS_NORMALMAP
     vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+#else
+    vec3 n = v_normal;
+#endif
     vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera
     // vec3 l = normalize(u_LightDirection);             // Vector from surface point to light
     vec3 l = vec3( 0.6, 0.8, 0.0 );             // Vector from surface point to light

@@ -355,7 +355,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         this.indexBuffer = null;
 
 
-        this.program = null;
+        this.shader = null;
 
 
         this.boundingBox = null;
