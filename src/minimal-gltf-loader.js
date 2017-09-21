@@ -1,4 +1,5 @@
 import {vec3, vec4, quat, mat4} from 'gl-matrix';
+// require('gl-matrix');
 
 var MinimalGLTFLoader = MinimalGLTFLoader || {};
 (function() {

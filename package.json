@@ -2,12 +2,14 @@
   "name": "minimal-gltf-loader",
   "version": "0.1.0",
   "description": "A minimal JavaScript glTF Loader without need of 3D engines like Three.js.",
-  "main": "src/minimal-gltf-loader.js",
+  "main": "build/minimal-gltf-loader.js",
   "directories": {
     "example": "examples"
   },
   "scripts": {
     "test": "gulp jsHint",
+    "build-examples": "webpack --config examples/webpack.config.js",
+    "build-examples-watch": "webpack --config examples/webpack.config.js --watch",
     "build": "webpack",
     "build-watch": "webpack --watch",
     "dev-server": "node_modules/.bin/webpack-dev-server"

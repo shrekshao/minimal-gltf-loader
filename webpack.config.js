@@ -5,7 +5,7 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
   entry: {
-    app: './src/index.js'
+    lib: './src/minimal-gltf-loader.js'
   },
   resolve: {
       alias: {
@@ -14,31 +14,22 @@ module.exports = {
       }
   },
   output: {
-    filename: '[name].js',
-    path: path.resolve(__dirname, 'build')
+    filename: 'minimal-gltf-loader.js',
+    path: path.resolve(__dirname, 'build'),
+    library: 'MinimalGLTFLoader',
+    libraryTarget: 'umd'
+  },
+  externals: {
+    // glMatrix: 'gl-matrix'
+    // vec3: ['gl-matrix', 'vec3'],
+    // vec4: ['gl-matrix', 'vec4'],
+    // quat: ['gl-matrix', 'quat'],
+    // mat4: ['gl-matrix', 'mat4']
   },
   module: {
-    rules: [
-        {
-            test: /\.css$/,
-            use: [
-              'style-loader',
-              'css-loader'
-            ]
-        },
-        {
-            test: /\.(png|jpg|gif)$/,
-            use: [
-                'file-loader'
-            ]
-        },
-        {
-            test: /\.(glsl|vs|fs)$/,
-            use: [
-                'shader-loader'
-            ]
-        }
-    ],
+    // rules: [
+
+    // ]
     // loaders: [
     //   {
     //     test: /\.glsl$/,
