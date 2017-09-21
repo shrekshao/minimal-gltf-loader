@@ -2609,9 +2609,36 @@ var Utils = Utils || {};
 (function()  {
     'use strict';
 
+    // var selectedGltfSampleModel = 'Drone';
+    var selectedGltfSampleModel = 'DamagedHelmet';
 
     var drawBoundingBox = false;
     var boundingBoxType = 'obb';
+
+    document.getElementById("gltf-model").addEventListener("change", function() {
+        selectedGltfSampleModel = this.value;
+        var uri;
+        if (selectedGltfSampleModel == 'Drone') {
+            uri = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
+        } else {
+            uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
+            + selectedGltfSampleModel
+            + '/glTF/'
+            + selectedGltfSampleModel
+            + '.gltf';
+        }
+        
+
+        glTFLoader.loadGLTF(uri, function(glTF) {
+            // var scene = scenes[0];
+            scenes = [];
+            // TODO: delete gl resources
+            // scene = null;
+
+            setupScene(glTF);
+        });
+
+    });
 
     document.getElementById("bbox-toggle").addEventListener("change", function() {
         drawBoundingBox = this.checked;
@@ -3195,7 +3222,7 @@ var Utils = Utils || {};
     // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-    var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
@@ -3215,7 +3242,7 @@ var Utils = Utils || {};
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Lantern/glTF/Lantern.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Corset/glTF/Corset.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF/Buggy.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
     // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
@@ -3262,6 +3289,7 @@ var Utils = Utils || {};
         
         if (scenes.length === 1) {
             // first model, adjust camera
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].identity(modelMatrix);
             
             // center
             s = 1.0 / Math.max( curGltfScene.boundingBox.transform[0], Math.max(curGltfScene.boundingBox.transform[5], curGltfScene.boundingBox.transform[10]) );
@@ -3408,7 +3436,7 @@ var Utils = Utils || {};
                 }
 
                 // indices ( assume use indices )
-                if (primitive.indices !== undefined) {
+                if (primitive.indices !== null) {
                     accessor = glTF.accessors[ primitive.indices ];
                     bufferView = accessor.bufferView;
                     if (bufferView.target === null) {
@@ -3431,21 +3459,24 @@ var Utils = Utils || {};
 
                 // material shader setup
                 material = primitive.material;
-                if (material.pbrMetallicRoughness.baseColorTexture) {
-                    primitive.shader.defineMacro('HAS_BASECOLORMAP');
+                if (material) {
+                    if (material.pbrMetallicRoughness.baseColorTexture) {
+                        primitive.shader.defineMacro('HAS_BASECOLORMAP');
+                    }
+                    if (material.pbrMetallicRoughness.metallicRoughnessTexture) {
+                        primitive.shader.defineMacro('HAS_METALROUGHNESSMAP');
+                    }
+                    if (material.normalTexture) {
+                        primitive.shader.defineMacro('HAS_NORMALMAP');
+                    }
+                    if (material.occlusionTexture) {
+                        primitive.shader.defineMacro('HAS_OCCLUSIONMAP');
+                    }
+                    if (material.emissiveTexture) {
+                        primitive.shader.defineMacro('HAS_EMISSIVEMAP');
+                    }
                 }
-                if (material.pbrMetallicRoughness.metallicRoughnessTexture) {
-                    primitive.shader.defineMacro('HAS_METALROUGHNESSMAP');
-                }
-                if (material.normalTexture) {
-                    primitive.shader.defineMacro('HAS_NORMALMAP');
-                }
-                if (material.occlusionTexture) {
-                    primitive.shader.defineMacro('HAS_OCCLUSIONMAP');
-                }
-                if (material.emissiveTexture) {
-                    primitive.shader.defineMacro('HAS_EMISSIVEMAP');
-                }
+                
 
                 primitive.shader.compile();
 
@@ -3525,7 +3556,17 @@ var Utils = Utils || {};
             __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].transpose(localMVNormal, localMVNormal);
 
 
-            if (primitive.material !== null) {
+            var texture, sampler;
+            var baseColor = defaultColor;
+
+            var shader = primitive.shader;
+            var material = primitive.material;
+            
+
+            if (material !== null) {
+                var pbrMetallicRoughness = material.pbrMetallicRoughness;
+                baseColor = pbrMetallicRoughness.baseColorFactor;
+                
                 if (primitive.material.doubleSided === isFaceCulling) {
                     isFaceCulling = !primitive.material.doubleSided;
                     if (isFaceCulling) {
@@ -3535,53 +3576,47 @@ var Utils = Utils || {};
                     }
                 }
             }
+
             
-
-            // @tmp: program choice
-            // super ugly code
-
-            var texture, sampler;
-            var baseColor = defaultColor;
-
-            var shader = primitive.shader;
-            var material = primitive.material;
-            var pbrMetallicRoughness = material.pbrMetallicRoughness;
             
             if (program != primitive.shader.programObject) {
                 program = primitive.shader.programObject;
                 gl.useProgram(program.program);
             }
 
-            // base color texture
-            if (shader.hasBaseColorMap()) {
-                activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
-            }
+            if (material) {
+                // base color texture
+                if (shader.hasBaseColorMap()) {
+                    activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
+                }
 
-            // normal texture
-            if (shader.hasNormalMap()) {
-                activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
-                gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
-            }
+                // normal texture
+                if (shader.hasNormalMap()) {
+                    activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
+                    gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
+                }
 
-            // metallic roughness texture
-            if (shader.hasMetalRoughnessMap()) {
-                activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
+                // metallic roughness texture
+                if (shader.hasMetalRoughnessMap()) {
+                    activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
+                }
+                
+                gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
+                gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
+
+                // occlusion texture
+                if (shader.hasOcclusionMap()) {
+                    activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
+                    gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
+                }
+
+                // emissive texture
+                if (shader.hasEmissiveMap()) {
+                    activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
+                    gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
+                }
             }
             
-            gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
-            gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
-
-            // occlusion texture
-            if (shader.hasOcclusionMap()) {
-                activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
-                gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
-            }
-
-            // emissive texture
-            if (shader.hasEmissiveMap()) {
-                activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
-                gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
-            }
             
             // TODO: skin JointMatrix uniform block
             if (shader.hasSkin()) {
@@ -3598,7 +3633,6 @@ var Utils = Utils || {};
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
 
-            baseColor = pbrMetallicRoughness.baseColorFactor;
 
             gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
             
@@ -3607,9 +3641,12 @@ var Utils = Utils || {};
 
             gl.bindVertexArray(primitive.vertexArray);
 
-            // TODO: when no indices, do drawArrays
-            gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
-            // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
+            if (primitive.indices !== null) {
+                gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
+            } else {
+                gl.drawArrays(primitive.mode, primitive.drawArraysOffset, primitive.drawArraysCount);
+            }
+
 
             gl.bindVertexArray(null);
 
@@ -8254,12 +8291,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
         }
 
-        // hook up accessor object
-        for ( attname in this.attributes ) {
-            this.attributes[attname] = gltf.accessors[ this.attributes[attname] ];
-        }
-
-        // @temp
+        
         if (this.indices !== null) {
             this.indicesComponentType = gltf.json.accessors[this.indices].componentType;
             this.indicesLength = gltf.json.accessors[this.indices].count;
@@ -8271,7 +8303,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         }
 
         
-        
+        // hook up accessor object
+        for ( attname in this.attributes ) {
+            this.attributes[attname] = gltf.accessors[ this.attributes[attname] ];
+        }
 
 
         this.material = p.material !== undefined ? gltf.materials[p.material] : null;

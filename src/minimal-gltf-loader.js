@@ -331,12 +331,7 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             }
         }
 
-        // hook up accessor object
-        for ( attname in this.attributes ) {
-            this.attributes[attname] = gltf.accessors[ this.attributes[attname] ];
-        }
-
-        // @temp
+        
         if (this.indices !== null) {
             this.indicesComponentType = gltf.json.accessors[this.indices].componentType;
             this.indicesLength = gltf.json.accessors[this.indices].count;
@@ -348,7 +343,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         }
 
         
-        
+        // hook up accessor object
+        for ( attname in this.attributes ) {
+            this.attributes[attname] = gltf.accessors[ this.attributes[attname] ];
+        }
 
 
         this.material = p.material !== undefined ? gltf.materials[p.material] : null;
