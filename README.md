@@ -8,10 +8,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
 ![](img/helmet-pbr.png)
 ![](img/drone-pbr.png)
 ![](img/skin.gif)
-![](img/viewer-screenshot-gear.png)
 ![](img/viewer-screenshot-buggy-bbox.png)
-![](img/viewer-screenshot-duck.png)
-![](img/boxAnimated.gif)
 
 
 ## Loading Features
@@ -66,7 +63,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
 
 ## Credits
 
-* [glTF sample Model](https://github.com/KhronosGroup/glTF-Sample-Models)
+* [glTF sample Model](https://github.com/KhronosGroup/glTF-Sample-Models) and [Buster Drone By LaVADraGoN](https://sketchfab.com/models/294e79652f494130ad2ab00a13fdbafd)
 * Great thanks to Trung Le ([@trungtle](https://github.com/trungtle)) and Patrick Cozzi ([@pjcozzi](https://github.com/pjcozzi)) for contributing and advising. 
 * gl-Matrix by Brandon Jones ([@toji](https://github.com/toji)) and Colin MacKenzie IV ([@sinisterchipmunk](https://github.com/sinisterchipmunk))
 * [glTF-WebGL-PBR](https://github.com/KhronosGroup/glTF-WebGL-PBR)
