@@ -47,7 +47,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
     * [x] Skybox
     * [x] PBR
     * [x] Animation
-        * Interpolations
+    * Interpolations
         - [x] LINEAR
         - [ ] STEP
         - [ ] CATMULLROMSPLINE
