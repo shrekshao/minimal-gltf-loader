@@ -60,1717 +60,11 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = 8);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__ = __webpack_require__(14);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css__ = __webpack_require__(15);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__css_style_css__);
-
-// import {MinimalGLTFLoader} from 'Lib/minimal-gltf-loader.js';
-
-// require('./lib/minimal-gltf-loader.js');
-
-
-
-
-// utils
-(function () {
-    'use strict';
-
-    window.getShaderSource = function(id) {
-        return document.getElementById(id).textContent.replace(/^\s+|\s+$/g, '');
-    };
-
-    function createShader(gl, source, type) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        return shader;
-    }
-
-    window.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
-        var program = gl.createProgram();
-        var vshader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
-        var fshader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
-        gl.attachShader(program, vshader);
-        gl.deleteShader(vshader);
-        gl.attachShader(program, fshader);
-        gl.deleteShader(fshader);
-        gl.linkProgram(program);
-
-        var log = gl.getProgramInfoLog(program);
-        if (log) {
-            console.log(log);
-        }
-
-        log = gl.getShaderInfoLog(vshader);
-        if (log) {
-            console.log(log);
-        }
-
-        log = gl.getShaderInfoLog(fshader);
-        if (log) {
-            console.log(log);
-        }
-
-        return program;
-    };
-
-    window.loadImage = function(url, onload) {
-        var img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = url;
-        // img.onload = function() {
-        //     onload(img);
-        // };
-        img.onload = onload;
-        return img;
-    };
-
-    window.loadImages = function(urls, onload) {
-        var imgs = [];
-        var imgsToLoad = urls.length;
-
-        function onImgLoad() {
-            if (--imgsToLoad <= 0) {
-                onload(imgs);
-            }
-        }
-
-        for (var i = 0; i < imgsToLoad; ++i) {
-            imgs.push(loadImage(urls[i], onImgLoad));
-        }
-    };
-
-    window.loadObj = function(url, onload) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'text';
-        xhr.onload = function(e) {
-            var mesh = new OBJ.Mesh(this.response);
-            onload(mesh);
-        };
-        xhr.send();
-    };
-})();
-
-
-
-
-
-(function()  {
-    'use strict';
-
-
-    var drawBoundingBox = false;
-    var boundingBoxType = 'obb';
-
-    document.getElementById("bbox-toggle").addEventListener("change", function() {
-        drawBoundingBox = this.checked;
-    });
-
-    document.getElementById("bbox-type").addEventListener("change", function() {
-        boundingBoxType = this.value;
-    });
-
-    var canvas = document.createElement('canvas');
-    // canvas.width = Math.min(window.innerWidth, window.innerHeight);
-    // canvas.height = canvas.width;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    document.body.appendChild(canvas);
-
-    var gl = canvas.getContext( 'webgl2', { antialias: true } );
-    var isWebGL2 = !!gl;
-    if(!isWebGL2) {
-        document.getElementById('info').innerHTML = 'WebGL 2 is not available.  See <a href="https://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation">How to get a WebGL 2 implementation</a>';
-        return;
-    }
-
-    canvas.oncontextmenu = function (e) {
-        e.preventDefault();
-    };
-
-    // Scene object for runtime renderer
-    var Scene = function(glTFScene, glTF, id) {
-        this.glTFScene = glTFScene;
-        this.glTF = glTF;
-        this.id = id;
-
-        // runtime renderer context
-        this.rootTransform = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        // @temp, assume every node is in current scene
-        this.nodeMatrix = new Array(glTF.nodes.length);
-        var i, len;
-        for(i = 0, len = this.nodeMatrix.length; i < len; i++) {
-            this.nodeMatrix[i] = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        }
-
-        // TODO: runtime joint matrix
-    };
-
-    var BOUNDING_BOX = {
-        vertexData: new Float32Array([
-            0.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 1.0,
-
-            0.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            0.0, 1.0, 1.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 1.0,
-            0.0, 0.0, 1.0,
-
-            1.0, 1.0, 0.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            1.0, 1.0, 0.0,
-            1.0, 0.0, 0.0,
-
-            1.0, 0.0, 1.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0
-        ]),
-
-        vertexArray: gl.createVertexArray(),
-        vertexBuffer: gl.createBuffer(),
-
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, __webpack_require__(20), __webpack_require__(21)),
-        positionLocation: 0,
-        uniformMvpLocation: 0, 
-
-        
-        draw: (function() {
-            var MVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-            return (function(bbox, nodeTransform, V, P) {
-                // gl.useProgram(this.program);
-
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, nodeTransform, bbox.transform);
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, V, MVP);
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, P, MVP);
-
-                gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
-                // gl.bindVertexArray(this.vertexArray);
-                gl.drawArrays(gl.LINES, 0, 24);
-                // gl.bindVertexArray(null);
-            });
-        })()
-    };
-
-    
-
-    var defaultSampler = gl.createSampler();
-    gl.samplerParameteri(defaultSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
-    gl.samplerParameteri(defaultSampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_R, gl.REPEAT);
-    // gl.samplerParameterf(defaultSampler, gl.TEXTURE_MIN_LOD, -1000.0);
-    // gl.samplerParameterf(defaultSampler, gl.TEXTURE_MAX_LOD, 1000.0);
-    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_MODE, gl.NONE);
-    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
-
-
-
-
-
-
-
-
-    BOUNDING_BOX.uniformMvpLocation = gl.getUniformLocation(BOUNDING_BOX.program, "u_MVP");
-
-    gl.bindVertexArray(BOUNDING_BOX.vertexArray);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, BOUNDING_BOX.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, BOUNDING_BOX.vertexData, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(BOUNDING_BOX.positionLocation, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(BOUNDING_BOX.positionLocation);
-
-    gl.bindVertexArray(null);
-
-
-    var BRDF_LUT = {
-        texture: null,
-        textureIndex: 13,
-
-        createTexture: function (img) {
-            this.texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, this.texture);
-            gl.texImage2D(
-                gl.TEXTURE_2D,  // assumed
-                0,        // Level of details
-                // gl.RGB, // Format
-                // gl.RGB,
-                gl.RGBA, // Format
-                gl.RGBA,
-                gl.UNSIGNED_BYTE, // Size of each channel
-                // gl.FLOAT,
-                img
-            );
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-        }
-    }
-
-
-    // Environment maps
-    var CUBE_MAP = {
-        textureIndex: 15,
-        texture: null,
-
-        // IBL
-        textureIBLDiffuseIndex: 14,
-        textureIBLDiffuse: null,
-
-        // loading asset --------------------
-        uris: [
-            '../textures/environment/px.jpg',
-            '../textures/environment/nx.jpg',
-            '../textures/environment/py.jpg',
-            '../textures/environment/ny.jpg',
-            '../textures/environment/pz.jpg',
-            '../textures/environment/nz.jpg',
-
-            // ibl diffuse
-            '../textures/environment/diffuse/bakedDiffuse_01.jpg',
-            '../textures/environment/diffuse/bakedDiffuse_02.jpg',
-            '../textures/environment/diffuse/bakedDiffuse_03.jpg',
-            '../textures/environment/diffuse/bakedDiffuse_04.jpg',
-            '../textures/environment/diffuse/bakedDiffuse_05.jpg',
-            '../textures/environment/diffuse/bakedDiffuse_06.jpg',
-
-            // @tmp, ugly, load brdfLUT here
-            '../textures/brdfLUT.png'
-        ],
-
-        images: null,
-
-        loadAll: function() {
-            loadImages(this.uris, this.onloadAll.bind(this));
-        },
-
-        onloadAll: function(imgs) {
-            this.images = imgs;
-            console.log('all cube maps loaded');
-
-            this.texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
-
-            for (var i = 0; i < 6; i++) {
-                gl.texImage2D(
-                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                    0,
-                    gl.RGBA,
-                    gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    this.images[i]
-                );
-            }
-            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
-
-
-
-            this.textureIBLDiffuse = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureIBLDiffuse);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
-            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
-
-            for (var i = 0; i < 6; i++) {
-                gl.texImage2D(
-                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                    0,
-                    gl.RGBA,
-                    gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    this.images[i + 6]
-                );
-            }
-
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
-
-
-
-            // @tmp
-            BRDF_LUT.createTexture(this.images[this.images.length - 1]);
-
-            // @hack
-            gl.useProgram(programPBR.program);
-            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
-            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
-            gl.uniform1i(programPBR.uniformBrdfLUTLocation, BRDF_LUT.textureIndex);
-            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
-            gl.uniform1i(programPBR.uniformSpecularEnvSamplerLocation, CUBE_MAP.textureIndex);
-            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-            gl.uniform1i(programPBR.uniformDiffuseEnvSamplerLocation, CUBE_MAP.textureIBLDiffuseIndex);
-            gl.useProgram(null);
-
-            if (this.finishLoadingCallback) {
-                this.finishLoadingCallback();
-            }
-        },
-
-        finishLoadingCallback: null,
-
-
-        // runtime stuffs -------------------------
-        vertexData: new Float32Array([         
-            -1.0,  1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0,  1.0, -1.0,
-            -1.0,  1.0, -1.0,
-
-            -1.0, -1.0,  1.0,
-            -1.0, -1.0, -1.0,
-            -1.0,  1.0, -1.0,
-            -1.0,  1.0, -1.0,
-            -1.0,  1.0,  1.0,
-            -1.0, -1.0,  1.0,
-
-            1.0, -1.0, -1.0,
-            1.0, -1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0, -1.0,
-            1.0, -1.0, -1.0,
-
-            -1.0, -1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0, -1.0,  1.0,
-            -1.0, -1.0,  1.0,
-
-            -1.0,  1.0, -1.0,
-            1.0,  1.0, -1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            -1.0,  1.0, -1.0,
-
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0,
-            1.0, -1.0,  1.0
-        ]),
-
-        
-
-        vertexArray: gl.createVertexArray(),
-        vertexBuffer: gl.createBuffer(),
-
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, __webpack_require__(22), __webpack_require__(23)),
-        positionLocation: 0,
-        uniformMvpLocation: 0, 
-        uniformEnvironmentLocation: 0,
-
-        
-        draw: (function() {
-            var MVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-            return (function(V, P) {
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].copy(MVP, V);
-                MVP[12] = 0.0;
-                MVP[13] = 0.0;
-                MVP[14] = 0.0;
-                MVP[15] = 1.0;
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, P, MVP);
-
-                gl.useProgram(this.program);
-                gl.activeTexture(gl.TEXTURE0 + this.textureIndex);
-                gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
-                gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
-                gl.uniform1i(this.uniformEnvironmentLocation, this.textureIndex);
-                gl.bindVertexArray(this.vertexArray);
-                gl.drawArrays(gl.TRIANGLES, 0, 36);
-                gl.bindVertexArray(null);
-            });
-        })()
-    };
-
-    CUBE_MAP.uniformMvpLocation = gl.getUniformLocation(CUBE_MAP.program, "u_MVP");
-    CUBE_MAP.uniformEnvironmentLocation = gl.getUniformLocation(CUBE_MAP.program, "u_environment");
-
-    gl.bindVertexArray(CUBE_MAP.vertexArray);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, CUBE_MAP.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, CUBE_MAP.vertexData, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(CUBE_MAP.positionLocation, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(CUBE_MAP.positionLocation);
-
-    gl.bindVertexArray(null);
-
-
-    
-    var Shader_Static = {
-        shaderVersionLine: '#version 300 es\n',
-        
-        bitMasks: {
-            // vertex shader
-            HAS_SKIN: 1,
-            SKIN_VEC8: 2,
-
-            // fragment shader
-            HAS_BASECOLORMAP: 4,
-            HAS_NORMALMAP: 8,
-            HAS_METALROUGHNESSMAP: 16,
-            HAS_OCCLUSIONMAP: 32,
-            HAS_EMISSIVEMAP: 64
-        },
-
-        vsMasterCode: __webpack_require__(24),
-        fsMasterCode: __webpack_require__(25),
-
-        programObjects: {}    // < flags, Shader Object >
-    };
-
-    var Shader = function() {
-        // for PBR use only for now.
-
-        this.flags = 0;
-
-        // this.vertexShaderSource = null;
-        // this.fragmentShaderSource = null;
-
-        this.programObject = null;
-    };
-
-    Shader.prototype.hasBaseColorMap = function() {
-        return this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP;
-    };
-    Shader.prototype.hasNormalMap = function() {
-        return this.flags & Shader_Static.bitMasks.HAS_NORMALMAP;
-    };
-    Shader.prototype.hasMetalRoughnessMap = function() {
-        return this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP;
-    };
-    Shader.prototype.hasOcclusionMap = function() {
-        return this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP;
-    };
-    Shader.prototype.hasEmissiveMap = function() {
-        return this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP;
-    };
-
-    Shader.prototype.defineMacro = function(macro) {
-        if (Shader_Static.bitMasks[macro] !== undefined) {
-            this.flags = Shader_Static.bitMasks[macro] | this.flags;
-        } else {
-            console.log('WARNING: ' + macro + ' is not a valid macro');
-        }
-    };
-
-    Shader.prototype.compile = function() {
-        var existingProgramObject = Shader_Static.programObjects[this.flags];
-        if (existingProgramObject) {
-            this.programObject = existingProgramObject;
-            return;
-        }
-
-
-        // new program
-
-        var vsDefine = '';
-        var fsDefine = '';
-
-        // define macros
-
-        if (this.flags & Shader_Static.bitMasks.HAS_SKIN) {
-            vsDefine += '#define HAS_SKIN\n';
-        }
-        if (this.flags & Shader_Static.bitMasks.SKIN_VEC8) {
-            vsDefine += '#define SKIN_VEC8\n';
-        }
-
-        if (this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP) {
-            fsDefine += '#define HAS_BASECOLORMAP\n';
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_NORMALMAP) {
-            fsDefine += '#define HAS_NORMALMAP\n';
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP) {
-            fsDefine += '#define HAS_METALROUGHNESSMAP\n';
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP) {
-            fsDefine += '#define HAS_OCCLUSIONMAP\n';
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP) {
-            fsDefine += '#define HAS_EMISSIVEMAP\n';
-        }
-
-
-        // concat
-        var vertexShaderSource = 
-            Shader_Static.shaderVersionLine +
-            vsDefine +
-            Shader_Static.vsMasterCode;
-        
-        var fragmentShaderSource = 
-            Shader_Static.shaderVersionLine +
-            fsDefine +
-            Shader_Static.fsMasterCode;
-
-        // compile
-        var program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-        this.programObject = {
-            program: program,
-    
-            uniformLocations: {},
-
-            uniformBlockIndices: {}
-        };
-
-        // uniform block id
-        if (this.flags & Shader_Static.bitMasks.HAS_SKIN) {
-            this.programObject.uniformBlockIndices.JointMatrix = gl.getUniformBlockIndex(program, "JointMatrix");
-        }
-
-        // uniform locations
-        var us = this.programObject.uniformLocations;
-
-        us.MVP = gl.getUniformLocation(program, 'u_MVP');
-        us.MVNormal = gl.getUniformLocation(program, 'u_MVNormal');
-        us.baseColorFactor = gl.getUniformLocation(program, 'u_baseColorFactor');
-        us.metallicFactor = gl.getUniformLocation(program, 'u_metallicFactor');
-        us.roughnessFactor = gl.getUniformLocation(program, 'u_roughnessFactor');
-
-        if (this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP) {
-            us.baseColorTexture = gl.getUniformLocation(program, 'u_baseColorTexture');
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_NORMALMAP) {
-            us.normalTexture = gl.getUniformLocation(program, 'u_normalTexture');
-            us.normalTextureScale = gl.getUniformLocation(program, 'u_normalTextureScale');
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP) {
-            us.metallicRoughnessTexture = gl.getUniformLocation(program, 'u_metallicRoughnessTexture');
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP) {
-            us.occlusionTexture = gl.getUniformLocation(program, 'u_occlusionTexture');
-            us.occlusionStrength = gl.getUniformLocation(program, 'u_occlusionStrength');
-        }
-        if (this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP) {
-            us.emissiveTexture = gl.getUniformLocation(program, 'u_emissiveTexture');
-            us.emissiveFactor = gl.getUniformLocation(program, 'u_emissiveFactor');
-        }
-
-        us.diffuseEnvSampler = gl.getUniformLocation(program, 'u_DiffuseEnvSampler');
-        us.specularEnvSampler = gl.getUniformLocation(program, 'u_SpecularEnvSampler');
-        us.brdfLUT = gl.getUniformLocation(program, 'u_brdfLUT');
-
-        // set static uniform values in cubemap
-        gl.useProgram(program);
-        gl.uniform1i(us.brdfLUT, BRDF_LUT.textureIndex);
-        gl.uniform1i(us.specularEnvSampler, CUBE_MAP.textureIndex);
-        gl.uniform1i(us.diffuseEnvSampler, CUBE_MAP.textureIBLDiffuseIndex);
-        gl.useProgram(null);
-
-        Shader_Static.programObjects[this.flags] = this.programObject;
-    };
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // // -- Initialize program
-
-    var program = createProgram(gl, __webpack_require__(26), __webpack_require__(2));
-    var programBaseColor = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
-    };
-
-    program = createProgram(gl, __webpack_require__(8), __webpack_require__(3));
-    var programBaseTexture = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture")
-    };
-
-    // @temp test
-    program = createProgram(gl, __webpack_require__(8), __webpack_require__(27));
-    var programBaseTextureNormalMap = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        // uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
-        uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture")
-    };
-
-    // @temp PBR
-    program = createProgram(gl, __webpack_require__(28), __webpack_require__(29));
-    var programPBR = {
-        program: program,
-
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-
-        uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
-        uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture"),
-
-        uniformDiffuseEnvSamplerLocation: gl.getUniformLocation(program, "u_DiffuseEnvSampler"),
-        uniformSpecularEnvSamplerLocation: gl.getUniformLocation(program, "u_SpecularEnvSampler"),
-        uniformBrdfLUTLocation: gl.getUniformLocation(program, "u_brdfLUT"),
-        
-        
-        uniformMetallicRoughnessTextureLocation: gl.getUniformLocation(program, "u_metallicRoughnessTexture"),
-        uniformMetallicFactorLocation: gl.getUniformLocation(program, "u_metallicFactor"),
-        uniformRoughnessFactorLocation: gl.getUniformLocation(program, "u_roughnessFactor"),
-
-        uniformOcclusionTextureLocation: gl.getUniformLocation(program, "u_occlusionTexture"),
-        uniformOcclusionStrengthLocation: gl.getUniformLocation(program, "u_occlusionStrength"),
-
-        uniformEmissiveTextureLocation: gl.getUniformLocation(program, "u_emissiveTexture"),
-        uniformEmissiveFactorLocation: gl.getUniformLocation(program, "u_emissiveFactor")
-    };
-
-    
-
-
-
-    program = createProgram(gl, __webpack_require__(30), __webpack_require__(2));
-    var programSkinBaseColor = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    program = createProgram(gl, __webpack_require__(31), __webpack_require__(2));
-    var programSkinBaseColorVec8 = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    // temp
-    program = createProgram(gl, __webpack_require__(32), __webpack_require__(3));
-    var programSkinBaseTexture = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    program = createProgram(gl, __webpack_require__(33), __webpack_require__(3));
-    var programSkinBaseTextureVec8 = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    // -- Initialize vertex array
-    var POSITION_LOCATION = 0; // set with GLSL layout qualifier
-    var NORMAL_LOCATION = 1; // set with GLSL layout qualifier
-    var TEXCOORD_0_LOCATION = 2; // set with GLSL layout qualifier
-    var JOINTS_0_LOCATION = 3; // set with GLSL layout qualifier
-    var JOINTS_1_LOCATION = 5; // set with GLSL layout qualifier
-    var WEIGHTS_0_LOCATION = 4; // set with GLSL layout qualifier
-    var WEIGHTS_1_LOCATION = 6; // set with GLSL layout qualifier
-    
-    // -- Mouse Behaviour
-    var isDisplayRotation = true;
-    var s = 1;
-    var eulerX = 0;
-    var eulerY = 0;
-    // var s = 1;
-    // var t = -100;
-    var translate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
-    // var t = -5;
-    var modelMatrix = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-    var mouseDown = false;
-    var mouseButtonId = 0;
-    var lastMouseY = 0;
-    var lastMouseX = 0;
-    var identityQ = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["b" /* quat */].create();
-    window.onmousedown = function(event) {
-        mouseDown = true;
-        mouseButtonId = event.which;
-        lastMouseY = event.clientY;
-        lastMouseX = event.clientX;
-        if (mouseButtonId === 1) {
-            isDisplayRotation = false;
-        }
-    };
-    window.onmouseup = function(event) {
-        mouseDown = false;
-        isDisplayRotation = true;
-    };
-    window.onmousemove = function(event) {
-        if(!mouseDown) {
-            return;
-        }
-        var newY = event.clientY;
-        var newX = event.clientX;
-        
-        var deltaY = newY - lastMouseY;
-        var deltaX = newX - lastMouseX;
-        
-        // s *= (1 + deltaY / 1000);
-
-        switch(mouseButtonId) {
-            case 1:
-            // left: rotation
-            eulerX += -deltaY * 0.01;
-            eulerY += deltaX * 0.01;
-            break;
-            case 3:
-            // right
-            translate[0] += deltaX * 0.001;
-            translate[1] += -deltaY * 0.001;
-            break;
-        }
-        
-        
-        lastMouseY = newY;
-        lastMouseX = newX;
-    };
-    window.onwheel = function(event) {
-        translate[2] += -event.deltaY * 0.001;
-        // translate[2] *= 1 + (-event.deltaY * 0.01);
-    };
-
-    
-    // 2.0
-    var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-    var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
-
-    // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
-
-    // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
-
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/mrdoob/rome-gltf/master/files/models/black_soup/quadruped_wolf.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Lantern/glTF/Lantern.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Corset/glTF/Corset.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF/Buggy.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
-    
-    // var gltfUrl = 'https://raw.githubusercontent.com/shrekshao/glAvatar/master/demo/models/patrick_no_shirt/patrick-no-shirt.gltf';
-    // var gltfUrl = 'models/patrick_no_shirt/patrick-no-shirt.gltf';
-    // var gltfUrl = 'models/girl16/scene.gltf';
-
-    var glTFLoader = new __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__["a" /* MinimalGLTFLoader */].glTFLoader(gl);
-
-    var glTFModelCount = 1;
-    var scenes = [];
-
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
-    gl.frontFace(gl.CCW);
-    var isFaceCulling = true;
-
-
-    function setupScene(glTF, replaceScene) {
-        var i, len;
-
-        
-        var curGltfScene = glTF.scenes[glTF.defaultScene];
-
-        var sceneDeltaTranslate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].fromValues(curGltfScene.boundingBox.transform[0] * 1.2, 0, 0);
-        var tmpVec3Translate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
-
-        var newGltfRuntimeScene;
-        if (!replaceScene) {
-            newGltfRuntimeScene = new Scene(curGltfScene, glTF, scenes.length);
-            scenes.push(newGltfRuntimeScene);
-        } else {
-            newGltfRuntimeScene = scenes[replaceScene.id] = new Scene(curGltfScene, glTF, replaceScene.id);
-        }
-        
-        // for (i = 0, len = glTFModelCount; i < len; i++) {
-        //     scenes.push(new Scene(curGltfScene, glTF));
-        //     // vec3.scale(tmpVec3Translate, sceneDeltaTranslate, i);
-        //     // mat4.fromTranslation(scenes[i].rootTransform, tmpVec3Translate);
-        // }
-        
-
-        
-        if (scenes.length === 1) {
-            // first model, adjust camera
-            
-            // center
-            s = 1.0 / Math.max( curGltfScene.boundingBox.transform[0], Math.max(curGltfScene.boundingBox.transform[5], curGltfScene.boundingBox.transform[10]) );
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].getTranslation(translate, curGltfScene.boundingBox.transform);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].scale(translate, translate, -1);
-            translate[0] += - 0.5 * curGltfScene.boundingBox.transform[0];
-            translate[1] += - 0.5 * curGltfScene.boundingBox.transform[5];
-            translate[2] += - 0.5 * curGltfScene.boundingBox.transform[10];
-    
-            s *= 0.5;
-    
-            modelMatrix[0] = s;
-            modelMatrix[5] = s;
-            modelMatrix[10] = s;
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].translate(modelMatrix, modelMatrix, translate);
-    
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].set(translate, 0, 0, -1.5);
-            s = 1;
-        }
-        
-
-
-        // var in loop
-        var mesh;
-        var primitive;
-        var vertexBuffer;
-        var indexBuffer;
-        var vertexArray;
-
-        var nid, lenNodes;
-        var mid, lenMeshes;
-        
-        var attribute;
-        var material;
-
-        var image, texture, sampler;
-
-        var accessor, bufferView;
-
-        var animation, animationSampler, channel;
-
-        var skin;
-
-        // var curScene;   // runtime scene object (not gltf scene object)
-
-        program = programBaseColor;
-
-
-
-        // // animations typed array
-        // for (i = 0, len = glTF.animations.length; i < len; i++) {
-        //     animation = glTF.animations[i];
-
-            
-        // }
-
-        
-
-
-        // create buffers
-        for (i = 0, len = glTF.bufferViews.length; i < len; i++) {
-            bufferView = glTF.bufferViews[i];
-            bufferView.createBuffer(gl);
-            bufferView.bindData(gl);
-        }
-
-        
-        // create textures
-        if (glTF.textures) {
-            for (i = 0, len = glTF.textures.length; i < len; i++) {
-                texture = glTF.textures[i];
-                texture.createTexture(gl);
-            }
-        }
-
-        // create samplers
-        if (glTF.samplers) {
-            for (i = 0, len = glTF.samplers.length; i < len; i++) {
-                sampler = glTF.samplers[i];
-                
-                sampler.createSampler(gl);
-            }
-        }
-
-        if (glTF.skins) {
-            // gl.useProgram(programSkinBaseColor.program);
-            // gl.uniformBlockBinding(programSkinBaseColor.program, programSkinBaseColor.uniformBlockIndexJointMatrix, 0);
-            // gl.useProgram(null);
-            for (i = 0, len = glTF.skins.length; i < len; i++) {
-                skin = glTF.skins[i];
-                
-                skin.jointMatrixUniformBuffer = gl.createBuffer();
-
-                // gl.bindBufferBase(gl.UNIFORM_BUFFER, i, skin.jointMatrixUniformBuffer);
-                gl.bindBufferBase(gl.UNIFORM_BUFFER, skin.uniformBlockID, skin.jointMatrixUniformBuffer);
-
-                gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
-                gl.bufferData(gl.UNIFORM_BUFFER, skin.jointMatrixUnidormBufferData, gl.DYNAMIC_DRAW);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
-                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-            }
-        }
-
-
-
-        function setupAttribuite(attrib, location) {
-            if (attrib !== undefined) {
-                // var accessor = glTF.accessors[ attrib ];
-                var accessor = attrib;
-                var bufferView = accessor.bufferView;
-                if (bufferView.target === null) {
-                    // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
-                    gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
-                    gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                } else {
-                    gl.bindBuffer(bufferView.target, bufferView.buffer);
-                }
-                accessor.prepareVertexAttrib(location, gl);
-                return true;
-            }
-            return false;
-        }
-
-
-        // create vaos & materials shader source setup
-        for (mid = 0, lenMeshes = glTF.meshes.length; mid < lenMeshes; mid++) {
-            mesh = glTF.meshes[mid];
-            // vertexArrayMaps[mid] = [];
-
-            for (i = 0, len = mesh.primitives.length; i < len; ++i) {
-                primitive = mesh.primitives[i];
-                primitive.shader = new Shader();
-                // WebGL2: create vertexArray
-                primitive.vertexArray = vertexArray = gl.createVertexArray();
-                gl.bindVertexArray(vertexArray);
-                
-                
-                setupAttribuite(primitive.attributes.POSITION, POSITION_LOCATION);
-                setupAttribuite(primitive.attributes.NORMAL, NORMAL_LOCATION);
-
-                // @tmp, should consider together with material
-                setupAttribuite(primitive.attributes.TEXCOORD_0, TEXCOORD_0_LOCATION);
-                
-
-                if (
-                    setupAttribuite(primitive.attributes.JOINTS_0, JOINTS_0_LOCATION) &&
-                    setupAttribuite(primitive.attributes.WEIGHTS_0, WEIGHTS_0_LOCATION)
-                ) {
-                    // assume these two attributes always appear together
-                    primitive.shader.defineMacro('HAS_SKIN');
-                }
-                
-
-                if (
-                    setupAttribuite(primitive.attributes.JOINTS_1, JOINTS_1_LOCATION) &&
-                    setupAttribuite(primitive.attributes.WEIGHTS_1, WEIGHTS_1_LOCATION)
-                ) {
-                    // assume these two attributes always appear together
-                    primitive.shader.defineMacro('SKIN_VEC8');
-                }
-
-                // indices ( assume use indices )
-                if (primitive.indices !== undefined) {
-                    accessor = glTF.accessors[ primitive.indices ];
-                    bufferView = accessor.bufferView;
-                    if (bufferView.target === null) {
-                        // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
-                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
-                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
-                    } else {
-                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
-                    }
-                }
-                
-                
-
-                gl.bindVertexArray(null);
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, null);
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
-
-
-                // material shader setup
-                material = primitive.material;
-                if (material.pbrMetallicRoughness.baseColorTexture) {
-                    primitive.shader.defineMacro('HAS_BASECOLORMAP');
-                }
-                if (material.pbrMetallicRoughness.metallicRoughnessTexture) {
-                    primitive.shader.defineMacro('HAS_METALROUGHNESSMAP');
-                }
-                if (material.normalTexture) {
-                    primitive.shader.defineMacro('HAS_NORMALMAP');
-                }
-                if (material.occlusionTexture) {
-                    primitive.shader.defineMacro('HAS_OCCLUSIONMAP');
-                }
-                if (material.emissiveTexture) {
-                    primitive.shader.defineMacro('HAS_EMISSIVEMAP');
-                }
-
-                primitive.shader.compile();
-
-            }
-            
-        }
-
-
-        return newGltfRuntimeScene;
-    }
-
-
-
-
-    // -- Render preparation
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-
-
-
-    var Renderer = Renderer || {};
-
-    (function() {
-        'use strict';
-
-
-        var scale = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
-        
-        var r = 0.0;
-        var rotationSpeedY= 0.01;
-        // var rotationSpeedY= 0.0;
-
-        var perspective = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].perspective(perspective, 0.785, canvas.width / canvas.height, 0.01, 100);
-
-        var modelView = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-
-        var localMV = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        var localMVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        var localMVNormal = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-
-        var VP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-
-        var hasIndices = true;
-
-        var hasSkin = false;
-        var uniformBlockID;     // same for uniform block binding id
-
-
-        var curScene;
-
-
-        function activeAndBindTexture(uniformLocation, textureInfo) {
-            gl.uniform1i(uniformLocation, textureInfo.index);
-            gl.activeTexture(gl.TEXTURE0 + textureInfo.index);
-            var texture = curScene.glTF.textures[ textureInfo.index ];
-            gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-            var sampler;
-            if (texture.sampler) {
-                sampler = texture.sampler.sampler;
-            } else {
-                sampler = defaultSampler;
-            }
-
-            gl.bindSampler(textureInfo.index, sampler);
-        }
-        
-
-        var defaultColor = [1.0, 1.0, 1.0, 1.0];
-        var drawPrimitive = Renderer.drawPrimitive = function(primitive, matrix) {
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].multiply(localMV, modelView, matrix);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].multiply(localMVP, perspective, localMV);
-            // mat4.multiply(localMVP, VP, matrix);
-
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].invert(localMVNormal, localMV);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].transpose(localMVNormal, localMVNormal);
-
-
-            if (primitive.material !== null) {
-                if (primitive.material.doubleSided === isFaceCulling) {
-                    isFaceCulling = !primitive.material.doubleSided;
-                    if (isFaceCulling) {
-                        gl.enable(gl.CULL_FACE);
-                    } else {
-                        gl.disable(gl.CULL_FACE);
-                    }
-                }
-            }
-            
-
-            // @tmp: program choice
-            // super ugly code
-
-            var texture, sampler;
-            var baseColor = defaultColor;
-            // hasSkin = false;
-            if (hasSkin) {
-                if (primitive.material !== null) {
-
-                    if (primitive.material.pbrMetallicRoughness !== null) {
-                        
-
-                        if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-
-                            if (primitive.attributes.JOINTS_1 === undefined) {
-                                if (program != programSkinBaseTexture) {
-                                    gl.useProgram(programSkinBaseTexture.program);
-                                    program = programSkinBaseTexture;
-                                }
-                            } else {
-                                if (program != programSkinBaseTextureVec8) {
-                                    gl.useProgram(programSkinBaseTextureVec8.program);
-                                    program = programSkinBaseTextureVec8;
-                                }
-                            }
-
-                            gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            // gl.activeTexture(gl.TEXTURE1);
-                            texture = curScene.glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
-                            gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                            if (texture.sampler) {
-                                sampler = texture.sampler.sampler;
-                            } else {
-                                sampler = defaultSampler;
-                            }
-
-                            gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
-
-                            if (primitive.material.pbrMetallicRoughness.baseColorFactor) {
-                                baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-                            }
-                        } else if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
-                            baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-
-                            if (primitive.attributes.JOINTS_1 === undefined) {
-                                if (program != programSkinBaseColor) {
-                                    gl.useProgram(programSkinBaseColor.program);
-                                    program = programSkinBaseColor;
-                                }
-                            } else {
-                                if (program != programSkinBaseColorVec8) {
-                                    gl.useProgram(programSkinBaseColorVec8.program);
-                                    program = programSkinBaseColorVec8;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, uniformBlockID);
-            } else {
-
-                if (primitive.material !== null) {
-                    if (primitive.material.pbrMetallicRoughness !== null) {
-                        var material = primitive.material;
-                        var pbrMetallicRoughness = primitive.material.pbrMetallicRoughness;
-                        // @tmp: ugly code...
-                        if (
-                            pbrMetallicRoughness.baseColorTexture
-                            // && pbrMetallicRoughness.metallicRoughnessTexture
-                            // && material.occlusionTexture
-                            // && material.emissiveTexture
-                        ) {
-                            // PBR dynamic texture test field
-
-                            // if (program != programPBR) {
-                            //     program = programPBR;
-                            //     gl.useProgram(program.program);
-                            // }
-
-                            var shader = primitive.shader;
-
-                            if (program != primitive.shader.programObject) {
-                                program = primitive.shader.programObject;
-                                gl.useProgram(program.program);
-                            }
-
-                            // base color texture
-                            if (shader.hasBaseColorMap()) {
-                                activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
-                            }
-
-                            // normal texture
-                            if (shader.hasNormalMap()) {
-                                activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
-                                gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
-                            }
-
-                            // metallic roughness texture
-                            if (shader.hasMetalRoughnessMap()) {
-                                activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
-                            }
-                            
-                            gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
-                            gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
-
-                            // occlusion texture
-                            if (shader.hasOcclusionMap()) {
-                                activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
-                                gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
-                            }
-
-                            // emissive texture
-                            if (shader.hasEmissiveMap()) {
-                                activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
-                                gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
-                            }
-                            
-                            // TODO: skin JointMatrix uniform block
-
-                            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
-                            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
-
-                            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
-                            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
-
-                            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
-                            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-
-                            baseColor = pbrMetallicRoughness.baseColorFactor;
-
-                            gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
-                            
-                            gl.uniformMatrix4fv(program.uniformLocations.MVP, false, localMVP);
-                            gl.uniformMatrix4fv(program.uniformLocations.MVNormal, false, localMVNormal);
-                
-                            gl.bindVertexArray(primitive.vertexArray);
-                
-                            // TODO: when no indices, do drawArrays
-                            gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
-                            // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
-                
-                            gl.bindVertexArray(null);
-                            return;
-
-                        } else {
-
-                            if ( pbrMetallicRoughness.baseColorTexture ) {
-                                if (primitive.material.normalTexture) {
-                                    if (program != programBaseTextureNormalMap) {
-                                        gl.useProgram(programBaseTextureNormalMap.program);
-                                        program = programBaseTextureNormalMap;
-                                    }
-
-                                    gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
-                                    gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
-                                    texture = curScene.glTF.textures[ primitive.material.normalTexture.index ];
-                                    gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                    if (texture.sampler) {
-                                        sampler = texture.sampler.sampler;
-                                    } else {
-                                        sampler = defaultSampler;
-                                    }
-
-                                    gl.bindSampler(primitive.material.normalTexture.index, sampler);
-                                } else {
-                                    if (program != programBaseTexture) {
-                                        gl.useProgram(programBaseTexture.program);
-                                        program = programBaseTexture;
-                                    }
-                                }
-
-
-                                gl.uniform1i(program.uniformBaseColorTextureLocation, pbrMetallicRoughness.baseColorTexture.index);
-                                gl.activeTexture(gl.TEXTURE0 + pbrMetallicRoughness.baseColorTexture.index);
-                                texture = curScene.glTF.textures[ pbrMetallicRoughness.baseColorTexture.index ];
-                                gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                if (texture.sampler) {
-                                    sampler = texture.sampler.sampler;
-                                } else {
-                                    sampler = defaultSampler;
-                                }
-
-                                gl.bindSampler(pbrMetallicRoughness.baseColorTexture.index, sampler);
-
-                                if (pbrMetallicRoughness.baseColorFactor) {
-                                    baseColor = pbrMetallicRoughness.baseColorFactor;
-                                }
-                            } else if (pbrMetallicRoughness.baseColorFactor) {
-                                baseColor = pbrMetallicRoughness.baseColorFactor;
-                                if (program != programBaseColor) {
-                                    gl.useProgram(programBaseColor.program);
-                                    program = programBaseColor;
-                                }
-                            }
-
-                        }
-
-                    }
-                }
-
-            }
-
-            gl.uniform4fv(program.uniformBaseColorFactorLocation, baseColor);
-
-            gl.uniformMatrix4fv(program.uniformMvpLocation, false, localMVP);
-            gl.uniformMatrix4fv(program.uniformMvNormalLocation, false, localMVNormal);
-
-            gl.bindVertexArray(primitive.vertexArray);
-
-            // TODO: when no indices, do drawArrays
-            gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
-            // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
-
-            gl.bindVertexArray(null);
-
-        }
-
-        // function drawMesh(mesh, matrix) {
-        // }
-        var tmpMat4 = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        var inverseTransformMat4 = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
-        
-        // @todo: 
-        // in a real engine, it is better to simply parse the node tree stucture
-        // to compute transform matrices,
-        // then sort node array by material and render use a for loop
-        // to minimize context switch
-        var drawNode = Renderer.drawNode = function (node, nodeID, nodeMatrix, parentModelMatrix) {
-            var matrix = nodeMatrix[nodeID];
-            
-            if (parentModelMatrix !== undefined) {
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(matrix, parentModelMatrix, node.matrix);
-            } else {
-                // from scene root, parent is identity
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].copy(matrix, node.matrix);
-            }
-            // mat4.mul(matrix, parentModelMatrix, node.matrix);
-
-            hasSkin = false;
-            if (node.skin !== null) {
-                // mesh node with skin
-                hasSkin = true;
-                var skin = node.skin;
-                uniformBlockID = skin.uniformBlockID;
-                var joints = node.skin.joints;
-                var jointNode;
-
-                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].invert(inverseTransformMat4, matrix);
-
-
-                // @tmp: assume joint nodes are always in the front of the scene node list
-                // so that their matrices are ready to use
-                for (i = 0, len = joints.length; i < len; i++) {
-                    jointNode = joints[i];
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.inverseBindMatrix[i]);
-                    
-                    
-                    
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, inverseTransformMat4, tmpMat4);
-
-                    // if (skin.skeleton !== null) {
-                    //     mat4.mul(tmpMat4, inverseSkeletonRootMat4, tmpMat4);
-                    // }
-
-                    skin.jointMatrixUnidormBufferData.set(tmpMat4, i * 16);
-                }
-
-                gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
-                // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData, 0, skin.jointMatrixUnidormBufferData.length);
-
-                // if (program != programSkinBaseColor) {
-                //     gl.useProgram(programSkinBaseColor.program);
-                //     program = programSkinBaseColor;
-
-                //     // @todo: uniform bind
-                //     gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
-                // }
-                
-            }
-
-
-            var i, len;
-
-            // draw cur node's mesh
-            if (node.mesh !== null) {
-                // drawMesh(glTF.meshes[node.mesh], matrix);
-
-                // var mesh = glTF.meshes[node.mesh];
-                var mesh = node.mesh;
-                for (i = 0, len = mesh.primitives.length; i < len; i++) {
-                    // draw primitive
-                    drawPrimitive(mesh.primitives[i], matrix);
-                }
-
-                // BOUNDING_BOX.draw(mesh.boundingBox, matrix, modelView, perspective);
-                // gl.useProgram(program);
-            }
-            
-            if (node.skin !== null) {
-                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-            }
-            
-
-            // draw children
-            
-            var childNodeID;
-            for (i = 0, len = node.children.length; i < len; i++) {
-                // childNodeID = node.children[i];
-                // drawNode(glTF.nodes[childNodeID], childNodeID, matrix);
-                drawNode(node.children[i], node.children[i].nodeID, nodeMatrix, matrix);
-            }
-        }
-
-
-        var drawScene = Renderer.drawScene = function (scene) {
-            // for (var i = 0, len = scene.nodes.length; i < len; i++) {
-            //     drawNode( scene.nodes[i], scene.nodes[i].nodeID, rootTransform );
-            // }
-            // animation
-            var animation;
-            var i, len, j, lenj;
-            var channel, animationSampler, node;
-
-            var glTF = scene.glTF;
-            if (glTF.animations) {
-                for (i = 0, len = glTF.animations.length; i < len; i++) {
-                    animation = glTF.animations[i];
-                    for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
-                        animation.samplers[j].getValue(timeParameter);
-                    }
-
-                    for (j = 0, lenj = animation.channels.length; j < lenj; j++) {
-                        channel = animation.channels[j];
-                        animationSampler = channel.sampler;
-                        node = glTF.nodes[channel.target.nodeID];
-
-                        switch (channel.target.path) {
-                            case 'rotation':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec4 */].copy(node.rotation, animationSampler.curValue);
-                            break;
-
-                            case 'translation':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].copy(node.translation, animationSampler.curValue);
-                            break;
-
-                            case 'scale':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].copy(node.scale, animationSampler.curValue);
-                            break;
-                        }
-                        // switch (channel.target.path) {
-                        //     case 'rotation':
-                        //     vec4.copy(node.rotation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'translation':
-                        //     vec3.copy(node.translation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'scale':
-                        //     vec3.copy(node.scale, animationSampler.curValue);
-                        //     break;
-                        // }
-
-                        node.updateMatrixFromTRS();
-                        
-                    }
-                }
-            }
-
-
-            for (var i = 0, len = scene.glTFScene.nodes.length; i < len; i++) {
-                drawNode( scene.glTFScene.nodes[i], scene.glTFScene.nodes[i].nodeID, scene.nodeMatrix, scene.rootTransform );
-            }
-        }
-
-        var drawSceneBBox = Renderer.drawSceneBBox = function (glTF, scene, bboxType) {
-            var node, mesh, bbox;
-            // @temp: assume all nodes are in cur scene
-            // @potential fix: can label each node's scene at the setup
-            var i, len;
-            for (i = 0, len = scene.nodeMatrix.length; i < len; i++) {
-                node = glTF.nodes[i];
-
-                if (bboxType == 'bvh') {
-                    // bvh
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.rootTransform, node.bvh.transform);
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
-                    gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-                    gl.drawArrays(gl.LINES, 0, 24);
-                }
-                else if (node.mesh !== null) {
-                    // mesh = glTF.meshes[node.mesh];
-                    mesh = node.mesh;
-
-                    if (bboxType == 'aabb') {
-                        // aabb
-                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.rootTransform, node.aabb.transform);
-                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
-                    } else {
-                        // obb (assume object node is static)
-                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.nodeMatrix[i], mesh.boundingBox.transform);
-                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
-                    }
-
-                    gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-                        
-                    gl.drawArrays(gl.LINES, 0, 24);
-
-                }   
-            }
-
-            // scene bounding box
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.rootTransform, scene.glTFScene.boundingBox.transform);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
-            gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-            gl.drawArrays(gl.LINES, 0, 24);
-        }
-        
-
-        var timeParameter = 0;
-
-
-
-
-
-        // -- Render loop
-        // function render() {
-        var render = Renderer.render = function() {
-            var i, len;
-            var j, lenj;
-            var node;
-
-
-            gl.clearColor(0.0, 0.0, 0.0, 1.0);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].set(scale, s, s, s);
-            // mat4.identity(modelView);
-            // mat4.translate(modelView, modelView, translate);
-            // mat4.scale(modelView, modelView, scale);
-            // mat4.fromRotationTranslationScale(modelView, identityQ, translate, scale);
-            // mat4.mul(modelView, modelView, modelMatrix);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].identity(modelView);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].translate(modelView, modelView, translate);
-            if (isDisplayRotation) {
-                r += rotationSpeedY;
-            }
-            
-
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateX(modelView, modelView, eulerX);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateY(modelView, modelView, r);
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].scale(modelView, modelView, scale);
-            
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(modelView, modelView, modelMatrix);
-
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateY(modelView, modelView, eulerY); 
-
-            
-
-            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(VP, perspective, modelView);
-
-            gl.useProgram(program.program);
-
-            for (i = 0, len = scenes.length; i < len; i++) {
-                curScene = scenes[i];
-
-                drawScene(scenes[i]);
-            }
-
-            if (drawBoundingBox) {
-                gl.useProgram(BOUNDING_BOX.program);
-                gl.bindVertexArray(BOUNDING_BOX.vertexArray);
-
-                for (i = 0, len = scenes.length; i < len; i++) {
-                    drawSceneBBox(scenes[i].glTF, scenes[i], boundingBoxType);
-                }
-
-
-                gl.bindVertexArray(null);
-                gl.useProgram(program.program);
-            }
-
-
-            // cube map
-
-            CUBE_MAP.draw(modelView, perspective);
-
-
-
-            requestAnimationFrame(render);
-            timeParameter += 0.01;
-        }
-
-    })();
-
-
-
-
-
-    // glTFLoader.loadGLTF(gltfUrl, function(glTF) {
-
-    //     setupScene(glTF);
-        
-
-    //     // render();
-    //     Renderer.render();
-        
-
-    // });
-
-    CUBE_MAP.finishLoadingCallback = function() {
-        glTFLoader.loadGLTF(gltfUrl, function(glTF) {
-            setupScene(glTF);
-            Renderer.render();
-        });
-    };
-
-    CUBE_MAP.loadAll();
-
-})();
-
-
-/***/ }),
-/* 1 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1847,31 +141,21 @@ function equals(a, b) {
 
 
 /***/ }),
-/* 2 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nuniform vec4 u_baseColorFactor;\n\nin vec3 v_normal;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\n\nvoid main()\n{\n    float intensity = dot(gl_FrontFacing ? v_normal : -v_normal, vec3(0.0, 0.0, 1.0));\n    color = u_baseColorFactor * intensity;\n    color.a = 1.0;\n}"
-
-/***/ }),
+/* 1 */,
+/* 2 */,
 /* 3 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nuniform vec4 u_baseColorFactor;\nuniform sampler2D u_baseColorTexture;\n\nin vec3 v_normal;\nin vec2 v_uv;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\n\nvoid main()\n{\n    float intensity = dot(gl_FrontFacing ? v_normal : -v_normal, vec3(0.0, 0.0, 1.0));\n    color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity; \n    color.a = 1.0;\n}"
-
-/***/ }),
-/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(9);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(10);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(5);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(11);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(12);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(13);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(5);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(6);
 /* unused harmony reexport glMatrix */
 /* unused harmony reexport mat2 */
 /* unused harmony reexport mat2d */
@@ -1922,7 +206,7 @@ THE SOFTWARE. */
 
 
 /***/ }),
-/* 5 */
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1956,7 +240,7 @@ THE SOFTWARE. */
 /* unused harmony export multiplyScalarAndAdd */
 /* unused harmony export exactEquals */
 /* unused harmony export equals */
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2729,7 +1013,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 6 */
+/* 5 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2773,7 +1057,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony export (immutable) */ __webpack_exports__["exactEquals"] = exactEquals;
 /* harmony export (immutable) */ __webpack_exports__["equals"] = equals;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -3569,7 +1853,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 7 */
+/* 6 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3605,7 +1889,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony export (immutable) */ __webpack_exports__["exactEquals"] = exactEquals;
 /* harmony export (immutable) */ __webpack_exports__["equals"] = equals;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -4231,10 +2515,1429 @@ const forEach = (function() {
 
 
 /***/ }),
+/* 7 */,
 /* 8 */
-/***/ (function(module, exports) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\n\nout vec3 v_normal;\nout vec2 v_uv;\n\nvoid main()\n{\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\n    v_uv = uv;\n    gl_Position = u_MVP * vec4(position, 1.0) ;\n}"
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__ = __webpack_require__(14);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__css_style_css__);
+
+// import {MinimalGLTFLoader} from 'Lib/minimal-gltf-loader.js';
+
+// require('./lib/minimal-gltf-loader.js');
+
+
+
+
+// utils
+(function () {
+    'use strict';
+
+    window.getShaderSource = function(id) {
+        return document.getElementById(id).textContent.replace(/^\s+|\s+$/g, '');
+    };
+
+    function createShader(gl, source, type) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    window.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
+        var program = gl.createProgram();
+        var vshader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
+        var fshader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+        gl.attachShader(program, vshader);
+        gl.deleteShader(vshader);
+        gl.attachShader(program, fshader);
+        gl.deleteShader(fshader);
+        gl.linkProgram(program);
+
+        var log = gl.getProgramInfoLog(program);
+        if (log) {
+            console.log(log);
+        }
+
+        log = gl.getShaderInfoLog(vshader);
+        if (log) {
+            console.log(log);
+        }
+
+        log = gl.getShaderInfoLog(fshader);
+        if (log) {
+            console.log(log);
+        }
+
+        return program;
+    };
+
+    window.loadImage = function(url, onload) {
+        var img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = url;
+        // img.onload = function() {
+        //     onload(img);
+        // };
+        img.onload = onload;
+        return img;
+    };
+
+    window.loadImages = function(urls, onload) {
+        var imgs = [];
+        var imgsToLoad = urls.length;
+
+        function onImgLoad() {
+            if (--imgsToLoad <= 0) {
+                onload(imgs);
+            }
+        }
+
+        for (var i = 0; i < imgsToLoad; ++i) {
+            imgs.push(loadImage(urls[i], onImgLoad));
+        }
+    };
+
+    window.loadObj = function(url, onload) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'text';
+        xhr.onload = function(e) {
+            var mesh = new OBJ.Mesh(this.response);
+            onload(mesh);
+        };
+        xhr.send();
+    };
+})();
+
+
+
+
+
+(function()  {
+    'use strict';
+
+
+    var drawBoundingBox = false;
+    var boundingBoxType = 'obb';
+
+    document.getElementById("bbox-toggle").addEventListener("change", function() {
+        drawBoundingBox = this.checked;
+    });
+
+    document.getElementById("bbox-type").addEventListener("change", function() {
+        boundingBoxType = this.value;
+    });
+
+    var canvas = document.createElement('canvas');
+    // canvas.width = Math.min(window.innerWidth, window.innerHeight);
+    // canvas.height = canvas.width;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+
+    var gl = canvas.getContext( 'webgl2', { antialias: true } );
+    var isWebGL2 = !!gl;
+    if(!isWebGL2) {
+        document.getElementById('info').innerHTML = 'WebGL 2 is not available.  See <a href="https://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation">How to get a WebGL 2 implementation</a>';
+        return;
+    }
+
+    canvas.oncontextmenu = function (e) {
+        e.preventDefault();
+    };
+
+    // Scene object for runtime renderer
+    var Scene = function(glTFScene, glTF, id) {
+        this.glTFScene = glTFScene;
+        this.glTF = glTF;
+        this.id = id;
+
+        // runtime renderer context
+        this.rootTransform = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        // @temp, assume every node is in current scene
+        this.nodeMatrix = new Array(glTF.nodes.length);
+        var i, len;
+        for(i = 0, len = this.nodeMatrix.length; i < len; i++) {
+            this.nodeMatrix[i] = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        }
+
+        // TODO: runtime joint matrix
+    };
+
+    var BOUNDING_BOX = {
+        vertexData: new Float32Array([
+            0.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 1.0,
+
+            0.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+
+            1.0, 1.0, 0.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            1.0, 1.0, 0.0,
+            1.0, 0.0, 0.0,
+
+            1.0, 0.0, 1.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+            0.0, 0.0, 1.0
+        ]),
+
+        vertexArray: gl.createVertexArray(),
+        vertexBuffer: gl.createBuffer(),
+
+        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
+        program: createProgram(gl, __webpack_require__(20), __webpack_require__(21)),
+        positionLocation: 0,
+        uniformMvpLocation: 0, 
+
+        
+        draw: (function() {
+            var MVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+            return (function(bbox, nodeTransform, V, P) {
+                // gl.useProgram(this.program);
+
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, nodeTransform, bbox.transform);
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, V, MVP);
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, P, MVP);
+
+                gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
+                // gl.bindVertexArray(this.vertexArray);
+                gl.drawArrays(gl.LINES, 0, 24);
+                // gl.bindVertexArray(null);
+            });
+        })()
+    };
+
+    
+
+    var defaultSampler = gl.createSampler();
+    gl.samplerParameteri(defaultSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+    gl.samplerParameteri(defaultSampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_WRAP_R, gl.REPEAT);
+    // gl.samplerParameterf(defaultSampler, gl.TEXTURE_MIN_LOD, -1000.0);
+    // gl.samplerParameterf(defaultSampler, gl.TEXTURE_MAX_LOD, 1000.0);
+    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+    // gl.samplerParameteri(defaultSampler, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+
+
+
+
+
+
+
+
+    BOUNDING_BOX.uniformMvpLocation = gl.getUniformLocation(BOUNDING_BOX.program, "u_MVP");
+
+    gl.bindVertexArray(BOUNDING_BOX.vertexArray);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, BOUNDING_BOX.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, BOUNDING_BOX.vertexData, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(BOUNDING_BOX.positionLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(BOUNDING_BOX.positionLocation);
+
+    gl.bindVertexArray(null);
+
+
+    var BRDF_LUT = {
+        texture: null,
+        textureIndex: 29,
+
+        createTexture: function (img) {
+            this.texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            gl.texImage2D(
+                gl.TEXTURE_2D,  // assumed
+                0,        // Level of details
+                // gl.RGB, // Format
+                // gl.RGB,
+                gl.RGBA, // Format
+                gl.RGBA,
+                gl.UNSIGNED_BYTE, // Size of each channel
+                // gl.FLOAT,
+                img
+            );
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+    }
+
+
+    // Environment maps
+    var CUBE_MAP = {
+        textureIndex: 31,
+        texture: null,
+
+        // IBL
+        textureIBLDiffuseIndex: 30,
+        textureIBLDiffuse: null,
+
+        // loading asset --------------------
+        uris: [
+            '../textures/environment/px.jpg',
+            '../textures/environment/nx.jpg',
+            '../textures/environment/py.jpg',
+            '../textures/environment/ny.jpg',
+            '../textures/environment/pz.jpg',
+            '../textures/environment/nz.jpg',
+
+            // ibl diffuse
+            '../textures/environment/diffuse/bakedDiffuse_01.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_02.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_03.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_04.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_05.jpg',
+            '../textures/environment/diffuse/bakedDiffuse_06.jpg',
+
+            // @tmp, ugly, load brdfLUT here
+            '../textures/brdfLUT.png'
+        ],
+
+        images: null,
+
+        loadAll: function() {
+            loadImages(this.uris, this.onloadAll.bind(this));
+        },
+
+        onloadAll: function(imgs) {
+            this.images = imgs;
+            console.log('all cube maps loaded');
+
+            this.texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+
+            for (var i = 0; i < 6; i++) {
+                gl.texImage2D(
+                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    gl.RGBA,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    this.images[i]
+                );
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+
+
+
+            this.textureIBLDiffuse = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureIBLDiffuse);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_MODE, gl.NONE);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+
+            for (var i = 0; i < 6; i++) {
+                gl.texImage2D(
+                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    gl.RGBA,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    this.images[i + 6]
+                );
+            }
+
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+
+
+
+            // @tmp
+            BRDF_LUT.createTexture(this.images[this.images.length - 1]);
+
+            if (this.finishLoadingCallback) {
+                this.finishLoadingCallback();
+            }
+        },
+
+        finishLoadingCallback: null,
+
+
+        // runtime stuffs -------------------------
+        vertexData: new Float32Array([         
+            -1.0,  1.0, -1.0,
+            -1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0,  1.0, -1.0,
+            -1.0,  1.0, -1.0,
+
+            -1.0, -1.0,  1.0,
+            -1.0, -1.0, -1.0,
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0,  1.0,
+            -1.0, -1.0,  1.0,
+
+            1.0, -1.0, -1.0,
+            1.0, -1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0, -1.0,
+            1.0, -1.0, -1.0,
+
+            -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0, -1.0,  1.0,
+            -1.0, -1.0,  1.0,
+
+            -1.0,  1.0, -1.0,
+            1.0,  1.0, -1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0,
+
+            -1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            1.0, -1.0,  1.0
+        ]),
+
+        
+
+        vertexArray: gl.createVertexArray(),
+        vertexBuffer: gl.createBuffer(),
+
+        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
+        program: createProgram(gl, __webpack_require__(22), __webpack_require__(23)),
+        positionLocation: 0,
+        uniformMvpLocation: 0, 
+        uniformEnvironmentLocation: 0,
+
+        
+        draw: (function() {
+            var MVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+            return (function(V, P) {
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].copy(MVP, V);
+                MVP[12] = 0.0;
+                MVP[13] = 0.0;
+                MVP[14] = 0.0;
+                MVP[15] = 1.0;
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(MVP, P, MVP);
+
+                gl.useProgram(this.program);
+                gl.activeTexture(gl.TEXTURE0 + this.textureIndex);
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
+                gl.uniformMatrix4fv(this.uniformMvpLocation, false, MVP);
+                gl.uniform1i(this.uniformEnvironmentLocation, this.textureIndex);
+                gl.bindVertexArray(this.vertexArray);
+                gl.drawArrays(gl.TRIANGLES, 0, 36);
+                gl.bindVertexArray(null);
+            });
+        })()
+    };
+
+    CUBE_MAP.uniformMvpLocation = gl.getUniformLocation(CUBE_MAP.program, "u_MVP");
+    CUBE_MAP.uniformEnvironmentLocation = gl.getUniformLocation(CUBE_MAP.program, "u_environment");
+
+    gl.bindVertexArray(CUBE_MAP.vertexArray);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, CUBE_MAP.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, CUBE_MAP.vertexData, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(CUBE_MAP.positionLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(CUBE_MAP.positionLocation);
+
+    gl.bindVertexArray(null);
+
+
+    
+    var Shader_Static = {
+        shaderVersionLine: '#version 300 es\n',
+        
+        bitMasks: {
+            // vertex shader
+            HAS_SKIN: 1,
+            SKIN_VEC8: 2,
+
+            // fragment shader
+            HAS_BASECOLORMAP: 4,
+            HAS_NORMALMAP: 8,
+            HAS_METALROUGHNESSMAP: 16,
+            HAS_OCCLUSIONMAP: 32,
+            HAS_EMISSIVEMAP: 64
+        },
+
+        vsMasterCode: __webpack_require__(24),
+        fsMasterCode: __webpack_require__(25),
+
+        programObjects: {}    // < flags, Shader Object >
+    };
+
+    var Shader = function() {
+        // for PBR use only for now.
+
+        this.flags = 0;
+
+        // this.vertexShaderSource = null;
+        // this.fragmentShaderSource = null;
+
+        this.programObject = null;
+    };
+
+    Shader.prototype.hasSkin = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_SKIN;
+    };
+    Shader.prototype.hasBaseColorMap = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP;
+    };
+    Shader.prototype.hasNormalMap = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_NORMALMAP;
+    };
+    Shader.prototype.hasMetalRoughnessMap = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP;
+    };
+    Shader.prototype.hasOcclusionMap = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP;
+    };
+    Shader.prototype.hasEmissiveMap = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP;
+    };
+
+
+    Shader.prototype.defineMacro = function(macro) {
+        if (Shader_Static.bitMasks[macro] !== undefined) {
+            this.flags = Shader_Static.bitMasks[macro] | this.flags;
+        } else {
+            console.log('WARNING: ' + macro + ' is not a valid macro');
+        }
+    };
+
+    Shader.prototype.compile = function() {
+        var existingProgramObject = Shader_Static.programObjects[this.flags];
+        if (existingProgramObject) {
+            this.programObject = existingProgramObject;
+            return;
+        }
+
+
+        // new program
+
+        var vsDefine = '';
+        var fsDefine = '';
+
+        // define macros
+
+        if (this.flags & Shader_Static.bitMasks.HAS_SKIN) {
+            vsDefine += '#define HAS_SKIN\n';
+        }
+        if (this.flags & Shader_Static.bitMasks.SKIN_VEC8) {
+            vsDefine += '#define SKIN_VEC8\n';
+        }
+
+        if (this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP) {
+            fsDefine += '#define HAS_BASECOLORMAP\n';
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_NORMALMAP) {
+            fsDefine += '#define HAS_NORMALMAP\n';
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP) {
+            fsDefine += '#define HAS_METALROUGHNESSMAP\n';
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP) {
+            fsDefine += '#define HAS_OCCLUSIONMAP\n';
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP) {
+            fsDefine += '#define HAS_EMISSIVEMAP\n';
+        }
+
+
+        // concat
+        var vertexShaderSource = 
+            Shader_Static.shaderVersionLine +
+            vsDefine +
+            Shader_Static.vsMasterCode;
+        
+        var fragmentShaderSource = 
+            Shader_Static.shaderVersionLine +
+            fsDefine +
+            Shader_Static.fsMasterCode;
+
+        // compile
+        var program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+        this.programObject = {
+            program: program,
+    
+            uniformLocations: {},
+
+            uniformBlockIndices: {}
+        };
+
+        // uniform block id
+        if (this.flags & Shader_Static.bitMasks.HAS_SKIN) {
+            this.programObject.uniformBlockIndices.JointMatrix = gl.getUniformBlockIndex(program, "JointMatrix");
+        }
+
+        // uniform locations
+        var us = this.programObject.uniformLocations;
+
+        us.MVP = gl.getUniformLocation(program, 'u_MVP');
+        us.MVNormal = gl.getUniformLocation(program, 'u_MVNormal');
+        us.baseColorFactor = gl.getUniformLocation(program, 'u_baseColorFactor');
+        us.metallicFactor = gl.getUniformLocation(program, 'u_metallicFactor');
+        us.roughnessFactor = gl.getUniformLocation(program, 'u_roughnessFactor');
+
+        if (this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP) {
+            us.baseColorTexture = gl.getUniformLocation(program, 'u_baseColorTexture');
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_NORMALMAP) {
+            us.normalTexture = gl.getUniformLocation(program, 'u_normalTexture');
+            us.normalTextureScale = gl.getUniformLocation(program, 'u_normalTextureScale');
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_METALROUGHNESSMAP) {
+            us.metallicRoughnessTexture = gl.getUniformLocation(program, 'u_metallicRoughnessTexture');
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_OCCLUSIONMAP) {
+            us.occlusionTexture = gl.getUniformLocation(program, 'u_occlusionTexture');
+            us.occlusionStrength = gl.getUniformLocation(program, 'u_occlusionStrength');
+        }
+        if (this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP) {
+            us.emissiveTexture = gl.getUniformLocation(program, 'u_emissiveTexture');
+            us.emissiveFactor = gl.getUniformLocation(program, 'u_emissiveFactor');
+        }
+
+        us.diffuseEnvSampler = gl.getUniformLocation(program, 'u_DiffuseEnvSampler');
+        us.specularEnvSampler = gl.getUniformLocation(program, 'u_SpecularEnvSampler');
+        us.brdfLUT = gl.getUniformLocation(program, 'u_brdfLUT');
+
+        // set static uniform values in cubemap
+        gl.useProgram(program);
+        gl.uniform1i(us.brdfLUT, BRDF_LUT.textureIndex);
+        gl.uniform1i(us.specularEnvSampler, CUBE_MAP.textureIndex);
+        gl.uniform1i(us.diffuseEnvSampler, CUBE_MAP.textureIBLDiffuseIndex);
+        gl.useProgram(null);
+
+        Shader_Static.programObjects[this.flags] = this.programObject;
+    };
+
+    // -- Initialize vertex array
+    var POSITION_LOCATION = 0; // set with GLSL layout qualifier
+    var NORMAL_LOCATION = 1; // set with GLSL layout qualifier
+    var TEXCOORD_0_LOCATION = 2; // set with GLSL layout qualifier
+    var JOINTS_0_LOCATION = 3; // set with GLSL layout qualifier
+    var JOINTS_1_LOCATION = 5; // set with GLSL layout qualifier
+    var WEIGHTS_0_LOCATION = 4; // set with GLSL layout qualifier
+    var WEIGHTS_1_LOCATION = 6; // set with GLSL layout qualifier
+    
+    // -- Mouse Behaviour
+    var isDisplayRotation = true;
+    var s = 1;
+    var eulerX = 0;
+    var eulerY = 0;
+    // var s = 1;
+    // var t = -100;
+    var translate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
+    // var t = -5;
+    var modelMatrix = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+    var mouseDown = false;
+    var mouseButtonId = 0;
+    var lastMouseY = 0;
+    var lastMouseX = 0;
+    var identityQ = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["b" /* quat */].create();
+    window.onmousedown = function(event) {
+        mouseDown = true;
+        mouseButtonId = event.which;
+        lastMouseY = event.clientY;
+        lastMouseX = event.clientX;
+        if (mouseButtonId === 1) {
+            isDisplayRotation = false;
+        }
+    };
+    window.onmouseup = function(event) {
+        mouseDown = false;
+        isDisplayRotation = true;
+    };
+    window.onmousemove = function(event) {
+        if(!mouseDown) {
+            return;
+        }
+        var newY = event.clientY;
+        var newX = event.clientX;
+        
+        var deltaY = newY - lastMouseY;
+        var deltaX = newX - lastMouseX;
+        
+        // s *= (1 + deltaY / 1000);
+
+        switch(mouseButtonId) {
+            case 1:
+            // left: rotation
+            eulerX += -deltaY * 0.01;
+            eulerY += deltaX * 0.01;
+            break;
+            case 3:
+            // right
+            translate[0] += deltaX * 0.001;
+            translate[1] += -deltaY * 0.001;
+            break;
+        }
+        
+        
+        lastMouseY = newY;
+        lastMouseX = newX;
+    };
+    window.onwheel = function(event) {
+        translate[2] += -event.deltaY * 0.001;
+        // translate[2] *= 1 + (-event.deltaY * 0.01);
+    };
+
+    
+    // 2.0
+    // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
+    var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
+
+    // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
+
+    // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
+
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/mrdoob/rome-gltf/master/files/models/black_soup/quadruped_wolf.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Lantern/glTF/Lantern.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Corset/glTF/Corset.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF/Buggy.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
+    // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
+    
+    // var gltfUrl = 'https://raw.githubusercontent.com/shrekshao/glAvatar/master/demo/models/patrick_no_shirt/patrick-no-shirt.gltf';
+    // var gltfUrl = 'models/patrick_no_shirt/patrick-no-shirt.gltf';
+    // var gltfUrl = 'models/girl16/scene.gltf';
+
+    var glTFLoader = new __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__["a" /* MinimalGLTFLoader */].glTFLoader(gl);
+
+    var glTFModelCount = 1;
+    var scenes = [];
+
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
+    gl.frontFace(gl.CCW);
+    var isFaceCulling = true;
+
+
+    function setupScene(glTF, replaceScene) {
+        var i, len;
+
+        
+        var curGltfScene = glTF.scenes[glTF.defaultScene];
+
+        var sceneDeltaTranslate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].fromValues(curGltfScene.boundingBox.transform[0] * 1.2, 0, 0);
+        var tmpVec3Translate = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
+
+        var newGltfRuntimeScene;
+        if (!replaceScene) {
+            newGltfRuntimeScene = new Scene(curGltfScene, glTF, scenes.length);
+            scenes.push(newGltfRuntimeScene);
+        } else {
+            newGltfRuntimeScene = scenes[replaceScene.id] = new Scene(curGltfScene, glTF, replaceScene.id);
+        }
+        
+        // for (i = 0, len = glTFModelCount; i < len; i++) {
+        //     scenes.push(new Scene(curGltfScene, glTF));
+        //     // vec3.scale(tmpVec3Translate, sceneDeltaTranslate, i);
+        //     // mat4.fromTranslation(scenes[i].rootTransform, tmpVec3Translate);
+        // }
+        
+
+        
+        if (scenes.length === 1) {
+            // first model, adjust camera
+            
+            // center
+            s = 1.0 / Math.max( curGltfScene.boundingBox.transform[0], Math.max(curGltfScene.boundingBox.transform[5], curGltfScene.boundingBox.transform[10]) );
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].getTranslation(translate, curGltfScene.boundingBox.transform);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].scale(translate, translate, -1);
+            translate[0] += - 0.5 * curGltfScene.boundingBox.transform[0];
+            translate[1] += - 0.5 * curGltfScene.boundingBox.transform[5];
+            translate[2] += - 0.5 * curGltfScene.boundingBox.transform[10];
+    
+            s *= 0.5;
+    
+            modelMatrix[0] = s;
+            modelMatrix[5] = s;
+            modelMatrix[10] = s;
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].translate(modelMatrix, modelMatrix, translate);
+    
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].set(translate, 0, 0, -1.5);
+            s = 1;
+        }
+        
+
+
+        // var in loop
+        var mesh;
+        var primitive;
+        var vertexBuffer;
+        var indexBuffer;
+        var vertexArray;
+
+        var nid, lenNodes;
+        var mid, lenMeshes;
+        
+        var attribute;
+        var material;
+
+        var image, texture, sampler;
+
+        var accessor, bufferView;
+
+        var animation, animationSampler, channel;
+
+        var skin;
+
+        // create buffers
+        for (i = 0, len = glTF.bufferViews.length; i < len; i++) {
+            bufferView = glTF.bufferViews[i];
+            bufferView.createBuffer(gl);
+            bufferView.bindData(gl);
+        }
+
+        
+        // create textures
+        if (glTF.textures) {
+            for (i = 0, len = glTF.textures.length; i < len; i++) {
+                texture = glTF.textures[i];
+                texture.createTexture(gl);
+            }
+        }
+
+        // create samplers
+        if (glTF.samplers) {
+            for (i = 0, len = glTF.samplers.length; i < len; i++) {
+                sampler = glTF.samplers[i];
+                
+                sampler.createSampler(gl);
+            }
+        }
+
+        if (glTF.skins) {
+            // gl.useProgram(programSkinBaseColor.program);
+            // gl.uniformBlockBinding(programSkinBaseColor.program, programSkinBaseColor.uniformBlockIndexJointMatrix, 0);
+            // gl.useProgram(null);
+            for (i = 0, len = glTF.skins.length; i < len; i++) {
+                skin = glTF.skins[i];
+                
+                skin.jointMatrixUniformBuffer = gl.createBuffer();
+
+                // gl.bindBufferBase(gl.UNIFORM_BUFFER, i, skin.jointMatrixUniformBuffer);
+                gl.bindBufferBase(gl.UNIFORM_BUFFER, skin.uniformBlockID, skin.jointMatrixUniformBuffer);
+
+                gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
+                gl.bufferData(gl.UNIFORM_BUFFER, skin.jointMatrixUnidormBufferData, gl.DYNAMIC_DRAW);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
+                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            }
+        }
+
+
+
+        function setupAttribuite(attrib, location) {
+            if (attrib !== undefined) {
+                // var accessor = glTF.accessors[ attrib ];
+                var accessor = attrib;
+                var bufferView = accessor.bufferView;
+                if (bufferView.target === null) {
+                    // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
+                    gl.bindBuffer(gl.ARRAY_BUFFER, bufferView.buffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
+                } else {
+                    gl.bindBuffer(bufferView.target, bufferView.buffer);
+                }
+                accessor.prepareVertexAttrib(location, gl);
+                return true;
+            }
+            return false;
+        }
+
+
+        // create vaos & materials shader source setup
+        for (mid = 0, lenMeshes = glTF.meshes.length; mid < lenMeshes; mid++) {
+            mesh = glTF.meshes[mid];
+            // vertexArrayMaps[mid] = [];
+
+            for (i = 0, len = mesh.primitives.length; i < len; ++i) {
+                primitive = mesh.primitives[i];
+                primitive.shader = new Shader();
+                // WebGL2: create vertexArray
+                primitive.vertexArray = vertexArray = gl.createVertexArray();
+                gl.bindVertexArray(vertexArray);
+                
+                
+                setupAttribuite(primitive.attributes.POSITION, POSITION_LOCATION);
+                setupAttribuite(primitive.attributes.NORMAL, NORMAL_LOCATION);
+
+                // @tmp, should consider together with material
+                setupAttribuite(primitive.attributes.TEXCOORD_0, TEXCOORD_0_LOCATION);
+                
+
+                if (
+                    setupAttribuite(primitive.attributes.JOINTS_0, JOINTS_0_LOCATION) &&
+                    setupAttribuite(primitive.attributes.WEIGHTS_0, WEIGHTS_0_LOCATION)
+                ) {
+                    // assume these two attributes always appear together
+                    primitive.shader.defineMacro('HAS_SKIN');
+                }
+                
+
+                if (
+                    setupAttribuite(primitive.attributes.JOINTS_1, JOINTS_1_LOCATION) &&
+                    setupAttribuite(primitive.attributes.WEIGHTS_1, WEIGHTS_1_LOCATION)
+                ) {
+                    // assume these two attributes always appear together
+                    primitive.shader.defineMacro('SKIN_VEC8');
+                }
+
+                // indices ( assume use indices )
+                if (primitive.indices !== undefined) {
+                    accessor = glTF.accessors[ primitive.indices ];
+                    bufferView = accessor.bufferView;
+                    if (bufferView.target === null) {
+                        // console.log('WARNING: the bufferview of this accessor should have a target, or it should represent non buffer data (like animation)');
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
+                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferView.data, gl.STATIC_DRAW);
+                    } else {
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferView.buffer);
+                    }
+                }
+                
+                
+
+                gl.bindVertexArray(null);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, null);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+
+
+                // material shader setup
+                material = primitive.material;
+                if (material.pbrMetallicRoughness.baseColorTexture) {
+                    primitive.shader.defineMacro('HAS_BASECOLORMAP');
+                }
+                if (material.pbrMetallicRoughness.metallicRoughnessTexture) {
+                    primitive.shader.defineMacro('HAS_METALROUGHNESSMAP');
+                }
+                if (material.normalTexture) {
+                    primitive.shader.defineMacro('HAS_NORMALMAP');
+                }
+                if (material.occlusionTexture) {
+                    primitive.shader.defineMacro('HAS_OCCLUSIONMAP');
+                }
+                if (material.emissiveTexture) {
+                    primitive.shader.defineMacro('HAS_EMISSIVEMAP');
+                }
+
+                primitive.shader.compile();
+
+            }
+            
+        }
+
+
+        return newGltfRuntimeScene;
+    }
+
+
+
+
+    // -- Render preparation
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
+
+
+    var Renderer = Renderer || {};
+
+    var program = null;
+
+    (function() {
+        'use strict';
+
+
+        var scale = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].create();
+        
+        var r = 0.0;
+        var rotationSpeedY= 0.01;
+        // var rotationSpeedY= 0.0;
+
+        var perspective = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].perspective(perspective, 0.785, canvas.width / canvas.height, 0.01, 100);
+
+        var modelView = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+
+        var localMV = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        var localMVP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        var localMVNormal = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+
+        var VP = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+
+        var hasIndices = true;
+
+        var hasSkin = false;
+        var uniformBlockID;     // same for uniform block binding id
+
+        var curScene;
+
+
+        function activeAndBindTexture(uniformLocation, textureInfo) {
+            gl.uniform1i(uniformLocation, textureInfo.index);
+            gl.activeTexture(gl.TEXTURE0 + textureInfo.index);
+            var texture = curScene.glTF.textures[ textureInfo.index ];
+            gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+            var sampler;
+            if (texture.sampler) {
+                sampler = texture.sampler.sampler;
+            } else {
+                sampler = defaultSampler;
+            }
+
+            gl.bindSampler(textureInfo.index, sampler);
+        }
+        
+
+        var defaultColor = [1.0, 1.0, 1.0, 1.0];
+        var drawPrimitive = Renderer.drawPrimitive = function(primitive, matrix) {
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].multiply(localMV, modelView, matrix);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].multiply(localMVP, perspective, localMV);
+            // mat4.multiply(localMVP, VP, matrix);
+
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].invert(localMVNormal, localMV);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].transpose(localMVNormal, localMVNormal);
+
+
+            if (primitive.material !== null) {
+                if (primitive.material.doubleSided === isFaceCulling) {
+                    isFaceCulling = !primitive.material.doubleSided;
+                    if (isFaceCulling) {
+                        gl.enable(gl.CULL_FACE);
+                    } else {
+                        gl.disable(gl.CULL_FACE);
+                    }
+                }
+            }
+            
+
+            // @tmp: program choice
+            // super ugly code
+
+            var texture, sampler;
+            var baseColor = defaultColor;
+
+            var shader = primitive.shader;
+            var material = primitive.material;
+            var pbrMetallicRoughness = material.pbrMetallicRoughness;
+            
+            if (program != primitive.shader.programObject) {
+                program = primitive.shader.programObject;
+                gl.useProgram(program.program);
+            }
+
+            // base color texture
+            if (shader.hasBaseColorMap()) {
+                activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
+            }
+
+            // normal texture
+            if (shader.hasNormalMap()) {
+                activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
+                gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
+            }
+
+            // metallic roughness texture
+            if (shader.hasMetalRoughnessMap()) {
+                activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
+            }
+            
+            gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
+            gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
+
+            // occlusion texture
+            if (shader.hasOcclusionMap()) {
+                activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
+                gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
+            }
+
+            // emissive texture
+            if (shader.hasEmissiveMap()) {
+                activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
+                gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
+            }
+            
+            // TODO: skin JointMatrix uniform block
+            if (shader.hasSkin()) {
+                gl.uniformBlockBinding(program.program, program.uniformBlockIndices.JointMatrix, uniformBlockID);
+            }
+            
+
+            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
+            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
+
+            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
+
+            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
+
+            baseColor = pbrMetallicRoughness.baseColorFactor;
+
+            gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
+            
+            gl.uniformMatrix4fv(program.uniformLocations.MVP, false, localMVP);
+            gl.uniformMatrix4fv(program.uniformLocations.MVNormal, false, localMVNormal);
+
+            gl.bindVertexArray(primitive.vertexArray);
+
+            // TODO: when no indices, do drawArrays
+            gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
+            // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
+
+            gl.bindVertexArray(null);
+
+        }
+
+        
+
+        var tmpMat4 = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        var inverseTransformMat4 = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].create();
+        
+        // @todo: 
+        // in a real engine, it is better to simply parse the node tree stucture
+        // to compute transform matrices,
+        // then sort node array by material and render use a for loop
+        // to minimize context switch
+        var drawNode = Renderer.drawNode = function (node, nodeID, nodeMatrix, parentModelMatrix) {
+            var matrix = nodeMatrix[nodeID];
+            
+            if (parentModelMatrix !== undefined) {
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(matrix, parentModelMatrix, node.matrix);
+            } else {
+                // from scene root, parent is identity
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].copy(matrix, node.matrix);
+            }
+            // mat4.mul(matrix, parentModelMatrix, node.matrix);
+
+            hasSkin = false;
+            if (node.skin !== null) {
+                // mesh node with skin
+                hasSkin = true;
+                var skin = node.skin;
+                uniformBlockID = skin.uniformBlockID;
+                var joints = node.skin.joints;
+                var jointNode;
+
+                __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].invert(inverseTransformMat4, matrix);
+
+
+                // @tmp: assume joint nodes are always in the front of the scene node list
+                // so that their matrices are ready to use
+                for (i = 0, len = joints.length; i < len; i++) {
+                    jointNode = joints[i];
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.inverseBindMatrix[i]);
+                    
+                    
+                    
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, inverseTransformMat4, tmpMat4);
+
+                    // if (skin.skeleton !== null) {
+                    //     mat4.mul(tmpMat4, inverseSkeletonRootMat4, tmpMat4);
+                    // }
+
+                    skin.jointMatrixUnidormBufferData.set(tmpMat4, i * 16);
+                }
+
+                gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
+                // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData, 0, skin.jointMatrixUnidormBufferData.length);
+
+                // if (program != programSkinBaseColor) {
+                //     gl.useProgram(programSkinBaseColor.program);
+                //     program = programSkinBaseColor;
+
+                //     // @todo: uniform bind
+                //     gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
+                // }
+                
+            }
+
+
+            var i, len;
+
+            // draw cur node's mesh
+            if (node.mesh !== null) {
+                // drawMesh(glTF.meshes[node.mesh], matrix);
+
+                // var mesh = glTF.meshes[node.mesh];
+                var mesh = node.mesh;
+                for (i = 0, len = mesh.primitives.length; i < len; i++) {
+                    // draw primitive
+                    drawPrimitive(mesh.primitives[i], matrix);
+                }
+
+                // BOUNDING_BOX.draw(mesh.boundingBox, matrix, modelView, perspective);
+                // gl.useProgram(program);
+            }
+            
+            if (node.skin !== null) {
+                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            }
+            
+
+            // draw children
+            
+            var childNodeID;
+            for (i = 0, len = node.children.length; i < len; i++) {
+                // childNodeID = node.children[i];
+                // drawNode(glTF.nodes[childNodeID], childNodeID, matrix);
+                drawNode(node.children[i], node.children[i].nodeID, nodeMatrix, matrix);
+            }
+        }
+
+
+        var drawScene = Renderer.drawScene = function (scene) {
+            // for (var i = 0, len = scene.nodes.length; i < len; i++) {
+            //     drawNode( scene.nodes[i], scene.nodes[i].nodeID, rootTransform );
+            // }
+            // animation
+            var animation;
+            var i, len, j, lenj;
+            var channel, animationSampler, node;
+
+            var glTF = scene.glTF;
+            if (glTF.animations) {
+                for (i = 0, len = glTF.animations.length; i < len; i++) {
+                    animation = glTF.animations[i];
+                    for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
+                        animation.samplers[j].getValue(timeParameter);
+                    }
+
+                    for (j = 0, lenj = animation.channels.length; j < lenj; j++) {
+                        channel = animation.channels[j];
+                        animationSampler = channel.sampler;
+                        node = glTF.nodes[channel.target.nodeID];
+
+                        switch (channel.target.path) {
+                            case 'rotation':
+                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec4 */].copy(node.rotation, animationSampler.curValue);
+                            break;
+
+                            case 'translation':
+                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].copy(node.translation, animationSampler.curValue);
+                            break;
+
+                            case 'scale':
+                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].copy(node.scale, animationSampler.curValue);
+                            break;
+                        }
+                        // switch (channel.target.path) {
+                        //     case 'rotation':
+                        //     vec4.copy(node.rotation, animationSampler.curValue);
+                        //     break;
+
+                        //     case 'translation':
+                        //     vec3.copy(node.translation, animationSampler.curValue);
+                        //     break;
+
+                        //     case 'scale':
+                        //     vec3.copy(node.scale, animationSampler.curValue);
+                        //     break;
+                        // }
+
+                        node.updateMatrixFromTRS();
+                        
+                    }
+                }
+            }
+
+
+            for (var i = 0, len = scene.glTFScene.nodes.length; i < len; i++) {
+                drawNode( scene.glTFScene.nodes[i], scene.glTFScene.nodes[i].nodeID, scene.nodeMatrix, scene.rootTransform );
+            }
+        }
+
+        var drawSceneBBox = Renderer.drawSceneBBox = function (glTF, scene, bboxType) {
+            var node, mesh, bbox;
+            // @temp: assume all nodes are in cur scene
+            // @potential fix: can label each node's scene at the setup
+            var i, len;
+            for (i = 0, len = scene.nodeMatrix.length; i < len; i++) {
+                node = glTF.nodes[i];
+
+                if (bboxType == 'bvh') {
+                    // bvh
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.rootTransform, node.bvh.transform);
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
+                    gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+                    gl.drawArrays(gl.LINES, 0, 24);
+                }
+                else if (node.mesh !== null) {
+                    // mesh = glTF.meshes[node.mesh];
+                    mesh = node.mesh;
+
+                    if (bboxType == 'aabb') {
+                        // aabb
+                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.rootTransform, node.aabb.transform);
+                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
+                    } else {
+                        // obb (assume object node is static)
+                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, scene.nodeMatrix[i], mesh.boundingBox.transform);
+                        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(localMVP, VP, localMVP);
+                    }
+
+                    gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+                        
+                    gl.drawArrays(gl.LINES, 0, 24);
+
+                }   
+            }
+
+            // // scene bounding box
+            // mat4.mul(localMVP, scene.rootTransform, scene.glTFScene.boundingBox.transform);
+            // mat4.mul(localMVP, VP, localMVP);
+            // gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+            // gl.drawArrays(gl.LINES, 0, 24);
+        }
+        
+
+        var timeParameter = 0;
+
+
+
+
+
+        // -- Render loop
+        // function render() {
+        var render = Renderer.render = function() {
+            var i, len;
+            var j, lenj;
+            var node;
+
+
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].set(scale, s, s, s);
+            // mat4.identity(modelView);
+            // mat4.translate(modelView, modelView, translate);
+            // mat4.scale(modelView, modelView, scale);
+            // mat4.fromRotationTranslationScale(modelView, identityQ, translate, scale);
+            // mat4.mul(modelView, modelView, modelMatrix);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].identity(modelView);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].translate(modelView, modelView, translate);
+            if (isDisplayRotation) {
+                r += rotationSpeedY;
+            }
+            
+
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateX(modelView, modelView, eulerX);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateY(modelView, modelView, r);
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].scale(modelView, modelView, scale);
+            
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(modelView, modelView, modelMatrix);
+
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].rotateY(modelView, modelView, eulerY); 
+
+            
+
+            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(VP, perspective, modelView);
+
+
+            for (i = 0, len = scenes.length; i < len; i++) {
+                curScene = scenes[i];
+
+                drawScene(scenes[i]);
+            }
+
+            if (drawBoundingBox) {
+                gl.useProgram(BOUNDING_BOX.program);
+                gl.bindVertexArray(BOUNDING_BOX.vertexArray);
+
+                for (i = 0, len = scenes.length; i < len; i++) {
+                    drawSceneBBox(scenes[i].glTF, scenes[i], boundingBoxType);
+                }
+
+
+                gl.bindVertexArray(null);
+            }
+
+
+            // cube map
+
+            CUBE_MAP.draw(modelView, perspective);
+
+            program = null;
+
+            requestAnimationFrame(render);
+            timeParameter += 0.01;
+        }
+
+    })();
+
+
+
+
+
+    // glTFLoader.loadGLTF(gltfUrl, function(glTF) {
+
+    //     setupScene(glTF);
+        
+
+    //     // render();
+    //     Renderer.render();
+        
+
+    // });
+
+    CUBE_MAP.finishLoadingCallback = function() {
+        glTFLoader.loadGLTF(gltfUrl, function(glTF) {
+            setupScene(glTF);
+            Renderer.render();
+        });
+    };
+
+    CUBE_MAP.loadAll();
+
+})();
+
 
 /***/ }),
 /* 9 */
@@ -4265,7 +3968,7 @@ module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_L
 /* unused harmony export equals */
 /* unused harmony export multiplyScalar */
 /* unused harmony export multiplyScalarAndAdd */
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -4733,7 +4436,7 @@ const sub = subtract;
 /* unused harmony export multiplyScalarAndAdd */
 /* unused harmony export exactEquals */
 /* unused harmony export equals */
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -5256,7 +4959,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["multiplyScalarAndAdd"] = multiplyScalarAndAdd;
 /* harmony export (immutable) */ __webpack_exports__["exactEquals"] = exactEquals;
 /* harmony export (immutable) */ __webpack_exports__["equals"] = equals;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6965,10 +6668,10 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromMat3"] = fromMat3;
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(5);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(6);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7674,7 +7377,7 @@ const setAxes = (function() {
 /* unused harmony export str */
 /* unused harmony export exactEquals */
 /* unused harmony export equals */
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -8283,7 +7986,7 @@ const forEach = (function() {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return MinimalGLTFLoader; });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(3);
 
 
 var MinimalGLTFLoader = MinimalGLTFLoader || {};
@@ -10215,61 +9918,13 @@ module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\
 /* 24 */
 /***/ (function(module, exports) {
 
-module.exports = "#define POSITION_LOCATION 0\r\n#define NORMAL_LOCATION 1\r\n#define TEXCOORD_0_LOCATION 2\r\n#define JOINTS_0_LOCATION 3\r\n#define JOINTS_1_LOCATION 5\r\n#define WEIGHTS_0_LOCATION 4\r\n#define WEIGHTS_1_LOCATION 6\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\nuniform mat4 u_MVNormal;\r\n\r\n#ifdef HAS_SKIN\r\nuniform JointMatrix\r\n{\r\n    mat4 matrix[32];\r\n} u_jointMatrix;\r\n#endif\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\nlayout(location = NORMAL_LOCATION) in vec3 normal;\r\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\r\n\r\n#ifdef HAS_SKIN\r\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\r\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\r\n#ifdef SKIN_VEC8\r\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\r\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\r\n#endif\r\n#endif\r\n// TODO: tangents\r\n\r\nout vec3 v_normal;\r\nout vec2 v_uv;\r\n\r\nvoid main()\r\n{\r\n\r\n#ifdef HAS_SKIN\r\n    mat4 skinMatrix = \r\n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\r\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\r\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\r\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)];\r\n#ifdef SKIN_VEC8\r\n    skinMatrix +=\r\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\r\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\r\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\r\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\r\n#endif\r\n#endif\r\n\r\n#ifdef HAS_SKIN\r\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\r\n#else\r\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\r\n#endif\r\n    \r\n    v_uv = uv;\r\n    gl_Position = u_MVP * vec4(position, 1.0) ;\r\n}"
+module.exports = "#define POSITION_LOCATION 0\r\n#define NORMAL_LOCATION 1\r\n#define TEXCOORD_0_LOCATION 2\r\n#define JOINTS_0_LOCATION 3\r\n#define JOINTS_1_LOCATION 5\r\n#define WEIGHTS_0_LOCATION 4\r\n#define WEIGHTS_1_LOCATION 6\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\nuniform mat4 u_MVNormal;\r\n\r\n#ifdef HAS_SKIN\r\nuniform JointMatrix\r\n{\r\n    mat4 matrix[32];\r\n} u_jointMatrix;\r\n#endif\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\nlayout(location = NORMAL_LOCATION) in vec3 normal;\r\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\r\n\r\n#ifdef HAS_SKIN\r\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\r\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\r\n#ifdef SKIN_VEC8\r\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\r\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\r\n#endif\r\n#endif\r\n// TODO: tangents\r\n\r\nout vec3 v_normal;\r\nout vec2 v_uv;\r\n\r\nvoid main()\r\n{\r\n\r\n#ifdef HAS_SKIN\r\n    mat4 skinMatrix = \r\n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\r\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\r\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\r\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)];\r\n#ifdef SKIN_VEC8\r\n    skinMatrix +=\r\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\r\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\r\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\r\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\r\n#endif\r\n#endif\r\n\r\n    v_uv = uv;\r\n\r\n#ifdef HAS_SKIN\r\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\r\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);\r\n#else\r\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\r\n    gl_Position = u_MVP * vec4(position, 1.0);\r\n#endif\r\n    \r\n}"
 
 /***/ }),
 /* 25 */
 /***/ (function(module, exports) {
 
 module.exports = "#define FRAG_COLOR_LOCATION 0\r\n\r\n// reference: https://github.com/KhronosGroup/glTF-WebGL-PBR/blob/master/shaders/pbr-frag.glsl\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n// IBL\r\nuniform samplerCube u_DiffuseEnvSampler;\r\nuniform samplerCube u_SpecularEnvSampler;\r\nuniform sampler2D u_brdfLUT;\r\n\r\n// Metallic-roughness material\r\n\r\n// TODO: use #define string for a full and dynamic support renderer\r\n\r\n// base color\r\nuniform vec4 u_baseColorFactor;\r\n#ifdef HAS_BASECOLORMAP\r\nuniform sampler2D u_baseColorTexture;\r\n#endif\r\n\r\n// normal map\r\n#ifdef HAS_NORMALMAP\r\nuniform sampler2D u_normalTexture;\r\nuniform float u_normalScale;\r\n#endif\r\n\r\n// emmisve map\r\n#ifdef HAS_EMISSIVEMAP\r\nuniform sampler2D u_emissiveTexture;\r\nuniform vec3 u_emissiveFactor;\r\n#endif\r\n\r\n// metal roughness\r\n#ifdef HAS_METALROUGHNESSMAP\r\nuniform sampler2D u_metallicRoughnessTexture;\r\n#endif\r\nuniform float u_metallicFactor;\r\nuniform float u_roughnessFactor;\r\n\r\n// occlusion texture\r\n#ifdef HAS_OCCLUSIONMAP\r\nuniform sampler2D u_occlusionTexture;\r\nuniform float u_occlusionStrength;\r\n#endif\r\n\r\nin vec3 v_normal;\r\nin vec2 v_uv;\r\n\r\nlayout(location = FRAG_COLOR_LOCATION) out vec4 frag_color;\r\n\r\nstruct PBRInfo\r\n{\r\n    float NdotL;                  // cos angle between normal and light direction\r\n    float NdotV;                  // cos angle between normal and view direction\r\n    float NdotH;                  // cos angle between normal and half vector\r\n    float LdotH;                  // cos angle between light direction and half vector\r\n    float VdotH;                  // cos angle between view direction and half vector\r\n    float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)\r\n    float metalness;              // metallic value at the surface\r\n    vec3 reflectance0;            // full reflectance color (normal incidence angle)\r\n    vec3 reflectance90;           // reflectance color at grazing angle\r\n    float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])\r\n    vec3 diffuseColor;            // color contribution from diffuse lighting\r\n    vec3 specularColor;           // color contribution from specular lighting\r\n};\r\n\r\n\r\nvec3 applyNormalMap(vec3 geomnor, vec3 normap) {\r\n    normap = normap * 2.0 - 1.0;\r\n    vec3 up = normalize(vec3(0.001, 1, 0.001));\r\n    vec3 surftan = normalize(cross(geomnor, up));\r\n    vec3 surfbinor = cross(geomnor, surftan);\r\n    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;\r\n}\r\n\r\nconst float M_PI = 3.141592653589793;\r\nconst float c_MinRoughness = 0.04;\r\n\r\n\r\nvec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)\r\n{\r\n    // float mipCount = 9.0; // resolution of 512x512\r\n    float mipCount = 10.0; // resolution of 1024x1024\r\n    float lod = (pbrInputs.perceptualRoughness * mipCount);\r\n    // retrieve a scale and bias to F0. See [1], Figure 3\r\n    vec3 brdf = texture(u_brdfLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;\r\n    vec3 diffuseLight = texture(u_DiffuseEnvSampler, n).rgb;\r\n\r\n// #ifdef USE_TEX_LOD\r\n    vec3 specularLight = texture(u_SpecularEnvSampler, reflection, lod).rgb;\r\n// #else\r\n    // vec3 specularLight = texture(u_SpecularEnvSampler, reflection).rgb;\r\n// #endif\r\n\r\n    vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;\r\n    vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);\r\n\r\n    // // For presentation, this allows us to disable IBL terms\r\n    // diffuse *= u_ScaleIBLAmbient.x;\r\n    // specular *= u_ScaleIBLAmbient.y;\r\n\r\n    return diffuse + specular;\r\n}\r\n\r\n// Basic Lambertian diffuse\r\n// Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog\r\n// See also [1], Equation 1\r\nvec3 diffuse(PBRInfo pbrInputs)\r\n{\r\n    return pbrInputs.diffuseColor / M_PI;\r\n}\r\n\r\n\r\n// The following equation models the Fresnel reflectance term of the spec equation (aka F())\r\n// Implementation of fresnel from [4], Equation 15\r\nvec3 specularReflection(PBRInfo pbrInputs)\r\n{\r\n    return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance0) * pow(clamp(1.0 - pbrInputs.VdotH, 0.0, 1.0), 5.0);\r\n}\r\n\r\n\r\n// This calculates the specular geometric attenuation (aka G()),\r\n// where rougher material will reflect less light back to the viewer.\r\n// This implementation is based on [1] Equation 4, and we adopt their modifications to\r\n// alphaRoughness as input as originally proposed in [2].\r\nfloat geometricOcclusion(PBRInfo pbrInputs)\r\n{\r\n    float NdotL = pbrInputs.NdotL;\r\n    float NdotV = pbrInputs.NdotV;\r\n    float r = pbrInputs.alphaRoughness;\r\n\r\n    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));\r\n    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));\r\n    return attenuationL * attenuationV;\r\n}\r\n\r\n\r\n// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())\r\n// Implementation from \"Average Irregularity Representation of a Roughened Surface for Ray Reflection\" by T. S. Trowbridge, and K. P. Reitz\r\n// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.\r\nfloat microfacetDistribution(PBRInfo pbrInputs)\r\n{\r\n    float roughnessSq = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;\r\n    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;\r\n    return roughnessSq / (M_PI * f * f);\r\n}\r\n\r\n\r\n\r\n\r\n\r\n\r\nvoid main()\r\n{\r\n    float perceptualRoughness = u_roughnessFactor;\r\n    float metallic = u_metallicFactor;\r\n\r\n#ifdef HAS_METALROUGHNESSMAP\r\n    // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.\r\n    // This layout intentionally reserves the 'r' channel for (optional) occlusion map data\r\n    vec4 mrSample = texture(u_metallicRoughnessTexture, v_uv);\r\n    perceptualRoughness = mrSample.g * perceptualRoughness;\r\n    metallic = mrSample.b * metallic;\r\n#endif\r\n    perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);\r\n    metallic = clamp(metallic, 0.0, 1.0);\r\n    // Roughness is authored as perceptual roughness; as is convention,\r\n    // convert to material roughness by squaring the perceptual roughness [2].\r\n    float alphaRoughness = perceptualRoughness * perceptualRoughness;\r\n\r\n\r\n    // The albedo may be defined from a base texture or a flat color\r\n#ifdef HAS_BASECOLORMAP\r\n    vec4 baseColor = texture(u_baseColorTexture, v_uv) * u_baseColorFactor;\r\n#else\r\n    vec4 baseColor = u_baseColorFactor;\r\n#endif\r\n\r\n\r\n\r\n    vec3 f0 = vec3(0.04);\r\n    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);\r\n    diffuseColor *= 1.0 - metallic;\r\n    vec3 specularColor = mix(f0, baseColor.rgb, metallic);\r\n\r\n    // Compute reflectance.\r\n    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);\r\n\r\n\r\n    // For typical incident reflectance range (between 4% to 100%) set the grazing reflectance to 100% for typical fresnel effect.\r\n    // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.\r\n    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);\r\n    vec3 specularEnvironmentR0 = specularColor.rgb;\r\n    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;\r\n\r\n\r\n    // vec3 n = getNormal();                             // normal at surface point\r\n#ifdef HAS_NORMALMAP\r\n    vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );\r\n#else\r\n    vec3 n = v_normal;\r\n#endif\r\n    vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera\r\n    // vec3 l = normalize(u_LightDirection);             // Vector from surface point to light\r\n    vec3 l = vec3( 0.6, 0.8, 0.0 );             // Vector from surface point to light\r\n    vec3 h = normalize(l+v);                          // Half vector between both l and v\r\n    vec3 reflection = -normalize(reflect(v, n));\r\n\r\n    float NdotL = clamp(dot(n, l), 0.001, 1.0);\r\n    float NdotV = abs(dot(n, v)) + 0.001;\r\n    float NdotH = clamp(dot(n, h), 0.0, 1.0);\r\n    float LdotH = clamp(dot(l, h), 0.0, 1.0);\r\n    float VdotH = clamp(dot(v, h), 0.0, 1.0);\r\n\r\n    PBRInfo pbrInputs = PBRInfo(\r\n        NdotL,\r\n        NdotV,\r\n        NdotH,\r\n        LdotH,\r\n        VdotH,\r\n        perceptualRoughness,\r\n        metallic,\r\n        specularEnvironmentR0,\r\n        specularEnvironmentR90,\r\n        alphaRoughness,\r\n        diffuseColor,\r\n        specularColor\r\n    );\r\n\r\n    // Calculate the shading terms for the microfacet specular shading model\r\n    vec3 F = specularReflection(pbrInputs);\r\n    float G = geometricOcclusion(pbrInputs);\r\n    float D = microfacetDistribution(pbrInputs);\r\n\r\n    // Calculation of analytical lighting contribution\r\n    vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);\r\n    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);\r\n    // vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);\r\n    vec3 color = NdotL * (diffuseContrib + specContrib);    // assume light color vec3(1, 1, 1)\r\n\r\n    // Calculate lighting contribution from image based lighting source (IBL)\r\n// #ifdef USE_IBL\r\n    color += getIBLContribution(pbrInputs, n, reflection);\r\n// #endif\r\n\r\n\r\n    // Apply optional PBR terms for additional (optional) shading\r\n#ifdef HAS_OCCLUSIONMAP\r\n    float ao = texture(u_occlusionTexture, v_uv).r;\r\n    color = mix(color, color * ao, u_occlusionStrength);\r\n#endif\r\n\r\n#ifdef HAS_EMISSIVEMAP\r\n    vec3 emissive = texture(u_emissiveTexture, v_uv).rgb * u_emissiveFactor;\r\n    color += emissive;\r\n#endif\r\n\r\n    // // This section uses mix to override final color for reference app visualization\r\n    // // of various parameters in the lighting equation.\r\n    // color = mix(color, F, u_ScaleFGDSpec.x);\r\n    // color = mix(color, vec3(G), u_ScaleFGDSpec.y);\r\n    // color = mix(color, vec3(D), u_ScaleFGDSpec.z);\r\n    // color = mix(color, specContrib, u_ScaleFGDSpec.w);\r\n\r\n    // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);\r\n    // color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);\r\n    // color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);\r\n    // color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);\r\n\r\n    frag_color = vec4(color, baseColor.a);\r\n}"
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\n\nout vec3 v_normal;\n\nvoid main()\n{\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\n    gl_Position = u_MVP * vec4(position, 1.0) ;\n}"
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nuniform vec4 u_baseColorFactor;\nuniform sampler2D u_baseColorTexture;\nuniform sampler2D u_normalTexture;\n\nin vec3 v_normal;\nin vec2 v_uv;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\n\n\nvec3 applyNormalMap(vec3 geomnor, vec3 normap) {\n    normap = normap * 2.0 - 1.0;\n    vec3 up = normalize(vec3(0.001, 1, 0.001));\n    vec3 surftan = normalize(cross(geomnor, up));\n    vec3 surfbinor = cross(geomnor, surftan);\n    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;\n}\n\nvoid main()\n{\n    vec3 normal = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );\n    normal = gl_FrontFacing ? normal : -normal;\n\n    float intensity = dot(normal, vec3(0.0, 0.0, 1.0));\n    color = u_baseColorFactor * texture(u_baseColorTexture, v_uv) * intensity;\n    color.a = 1.0;\n}"
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\n// TODO: tangents\n\nout vec3 v_normal;\nout vec2 v_uv;\n\nvoid main()\n{\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\n    v_uv = uv;\n    gl_Position = u_MVP * vec4(position, 1.0) ;\n}"
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\n// reference: https://github.com/KhronosGroup/glTF-WebGL-PBR/blob/master/shaders/pbr-frag.glsl\n\nprecision highp float;\nprecision highp int;\n\n// IBL\nuniform samplerCube u_DiffuseEnvSampler;\nuniform samplerCube u_SpecularEnvSampler;\nuniform sampler2D u_brdfLUT;\n\n// Metallic-roughness material\n\n// TODO: use #define string for a full and dynamic support renderer\n\n// base color\nuniform vec4 u_baseColorFactor;\nuniform sampler2D u_baseColorTexture;\n\n// normal map\nuniform sampler2D u_normalTexture;\nuniform float u_normalScale;\n\n// emmisve map\nuniform sampler2D u_emissiveTexture;\nuniform vec3 u_emissiveFactor;\n\n// metal roughness\nuniform sampler2D u_metallicRoughnessTexture;\n\nuniform float u_metallicFactor;\nuniform float u_roughnessFactor;\n\n// occlusion texture\nuniform sampler2D u_occlusionTexture;\nuniform float u_occlusionStrength;\n\nin vec3 v_normal;\nin vec2 v_uv;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 frag_color;\n\nstruct PBRInfo\n{\n    float NdotL;                  // cos angle between normal and light direction\n    float NdotV;                  // cos angle between normal and view direction\n    float NdotH;                  // cos angle between normal and half vector\n    float LdotH;                  // cos angle between light direction and half vector\n    float VdotH;                  // cos angle between view direction and half vector\n    float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)\n    float metalness;              // metallic value at the surface\n    vec3 reflectance0;            // full reflectance color (normal incidence angle)\n    vec3 reflectance90;           // reflectance color at grazing angle\n    float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])\n    vec3 diffuseColor;            // color contribution from diffuse lighting\n    vec3 specularColor;           // color contribution from specular lighting\n};\n\n\nvec3 applyNormalMap(vec3 geomnor, vec3 normap) {\n    normap = normap * 2.0 - 1.0;\n    vec3 up = normalize(vec3(0.001, 1, 0.001));\n    vec3 surftan = normalize(cross(geomnor, up));\n    vec3 surfbinor = cross(geomnor, surftan);\n    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;\n}\n\nconst float M_PI = 3.141592653589793;\nconst float c_MinRoughness = 0.04;\n\n\nvec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)\n{\n    // float mipCount = 9.0; // resolution of 512x512\n    float mipCount = 10.0; // resolution of 1024x1024\n    float lod = (pbrInputs.perceptualRoughness * mipCount);\n    // retrieve a scale and bias to F0. See [1], Figure 3\n    vec3 brdf = texture(u_brdfLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;\n    vec3 diffuseLight = texture(u_DiffuseEnvSampler, n).rgb;\n\n// #ifdef USE_TEX_LOD\n    vec3 specularLight = texture(u_SpecularEnvSampler, reflection, lod).rgb;\n// #else\n    // vec3 specularLight = texture(u_SpecularEnvSampler, reflection).rgb;\n// #endif\n\n    vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;\n    vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);\n\n    // // For presentation, this allows us to disable IBL terms\n    // diffuse *= u_ScaleIBLAmbient.x;\n    // specular *= u_ScaleIBLAmbient.y;\n\n    return diffuse + specular;\n}\n\n// Basic Lambertian diffuse\n// Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog\n// See also [1], Equation 1\nvec3 diffuse(PBRInfo pbrInputs)\n{\n    return pbrInputs.diffuseColor / M_PI;\n}\n\n\n// The following equation models the Fresnel reflectance term of the spec equation (aka F())\n// Implementation of fresnel from [4], Equation 15\nvec3 specularReflection(PBRInfo pbrInputs)\n{\n    return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance0) * pow(clamp(1.0 - pbrInputs.VdotH, 0.0, 1.0), 5.0);\n}\n\n\n// This calculates the specular geometric attenuation (aka G()),\n// where rougher material will reflect less light back to the viewer.\n// This implementation is based on [1] Equation 4, and we adopt their modifications to\n// alphaRoughness as input as originally proposed in [2].\nfloat geometricOcclusion(PBRInfo pbrInputs)\n{\n    float NdotL = pbrInputs.NdotL;\n    float NdotV = pbrInputs.NdotV;\n    float r = pbrInputs.alphaRoughness;\n\n    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));\n    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));\n    return attenuationL * attenuationV;\n}\n\n\n// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())\n// Implementation from \"Average Irregularity Representation of a Roughened Surface for Ray Reflection\" by T. S. Trowbridge, and K. P. Reitz\n// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.\nfloat microfacetDistribution(PBRInfo pbrInputs)\n{\n    float roughnessSq = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;\n    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;\n    return roughnessSq / (M_PI * f * f);\n}\n\n\n\n\n\n\nvoid main()\n{\n    float perceptualRoughness = u_roughnessFactor;\n    float metallic = u_metallicFactor;\n\n// #ifdef HAS_METALROUGHNESSMAP\n    // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.\n    // This layout intentionally reserves the 'r' channel for (optional) occlusion map data\n    vec4 mrSample = texture(u_metallicRoughnessTexture, v_uv);\n    perceptualRoughness = mrSample.g * perceptualRoughness;\n    metallic = mrSample.b * metallic;\n// #endif\n    perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);\n    metallic = clamp(metallic, 0.0, 1.0);\n    // Roughness is authored as perceptual roughness; as is convention,\n    // convert to material roughness by squaring the perceptual roughness [2].\n    float alphaRoughness = perceptualRoughness * perceptualRoughness;\n\n\n    // The albedo may be defined from a base texture or a flat color\n// #ifdef HAS_BASECOLORMAP\n    vec4 baseColor = texture(u_baseColorTexture, v_uv) * u_baseColorFactor;\n// #else\n    // vec4 baseColor = u_baseColorFactor;\n// #endif\n\n\n\n    vec3 f0 = vec3(0.04);\n    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);\n    diffuseColor *= 1.0 - metallic;\n    vec3 specularColor = mix(f0, baseColor.rgb, metallic);\n\n    // Compute reflectance.\n    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);\n\n\n    // For typical incident reflectance range (between 4% to 100%) set the grazing reflectance to 100% for typical fresnel effect.\n    // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.\n    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);\n    vec3 specularEnvironmentR0 = specularColor.rgb;\n    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;\n\n\n    // vec3 n = getNormal();                             // normal at surface point\n    vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );\n    vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera\n    // vec3 l = normalize(u_LightDirection);             // Vector from surface point to light\n    vec3 l = vec3( 0.6, 0.8, 0.0 );             // Vector from surface point to light\n    vec3 h = normalize(l+v);                          // Half vector between both l and v\n    vec3 reflection = -normalize(reflect(v, n));\n\n    float NdotL = clamp(dot(n, l), 0.001, 1.0);\n    float NdotV = abs(dot(n, v)) + 0.001;\n    float NdotH = clamp(dot(n, h), 0.0, 1.0);\n    float LdotH = clamp(dot(l, h), 0.0, 1.0);\n    float VdotH = clamp(dot(v, h), 0.0, 1.0);\n\n    PBRInfo pbrInputs = PBRInfo(\n        NdotL,\n        NdotV,\n        NdotH,\n        LdotH,\n        VdotH,\n        perceptualRoughness,\n        metallic,\n        specularEnvironmentR0,\n        specularEnvironmentR90,\n        alphaRoughness,\n        diffuseColor,\n        specularColor\n    );\n\n    // Calculate the shading terms for the microfacet specular shading model\n    vec3 F = specularReflection(pbrInputs);\n    float G = geometricOcclusion(pbrInputs);\n    float D = microfacetDistribution(pbrInputs);\n\n    // Calculation of analytical lighting contribution\n    vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);\n    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);\n    // vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);\n    vec3 color = NdotL * (diffuseContrib + specContrib);    // assume light color vec3(1, 1, 1)\n\n    // Calculate lighting contribution from image based lighting source (IBL)\n// #ifdef USE_IBL\n    color += getIBLContribution(pbrInputs, n, reflection);\n// #endif\n\n\n    // Apply optional PBR terms for additional (optional) shading\n// #ifdef HAS_OCCLUSIONMAP\n    float ao = texture(u_occlusionTexture, v_uv).r;\n    color = mix(color, color * ao, u_occlusionStrength);\n// #endif\n\n// #ifdef HAS_EMISSIVEMAP\n    vec3 emissive = texture(u_emissiveTexture, v_uv).rgb * u_emissiveFactor;\n    color += emissive;\n// #endif\n\n    // // This section uses mix to override final color for reference app visualization\n    // // of various parameters in the lighting equation.\n    // color = mix(color, F, u_ScaleFGDSpec.x);\n    // color = mix(color, vec3(G), u_ScaleFGDSpec.y);\n    // color = mix(color, vec3(D), u_ScaleFGDSpec.z);\n    // color = mix(color, specContrib, u_ScaleFGDSpec.w);\n\n    // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);\n    // color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);\n    // color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);\n    // color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);\n\n    frag_color = vec4(color, baseColor.a);\n}"
-
-/***/ }),
-/* 30 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n#define JOINTS_0_LOCATION 3\n#define WEIGHTS_0_LOCATION 4\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nuniform JointMatrix\n{\n    mat4 matrix[32];\n} u_jointMatrix;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = JOINTS_0_LOCATION) in vec4 joint;\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight;\n\nout vec3 v_normal;\n\nvoid main()\n{\n    mat4 skinMatrix = \n        weight.x * u_jointMatrix.matrix[int(joint.x)] +\n        weight.y * u_jointMatrix.matrix[int(joint.y)] +\n        weight.z * u_jointMatrix.matrix[int(joint.z)] +\n        weight.w * u_jointMatrix.matrix[int(joint.w)];\n\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;\n}"
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n#define JOINTS_0_LOCATION 3\n#define JOINTS_1_LOCATION 5\n#define WEIGHTS_0_LOCATION 4\n#define WEIGHTS_1_LOCATION 6\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nuniform JointMatrix\n{\n    mat4 matrix[32];\n} u_jointMatrix;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\n\nout vec3 v_normal;\n\nvoid main()\n{\n    mat4 skinMatrix = \n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)] +\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\n\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;\n}"
-
-/***/ }),
-/* 32 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n#define JOINTS_0_LOCATION 3\n#define WEIGHTS_0_LOCATION 4\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nuniform JointMatrix\n{\n    mat4 matrix[32];\n} u_jointMatrix;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\nlayout(location = JOINTS_0_LOCATION) in vec4 joint;\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight;\n\nout vec3 v_normal;\nout vec2 v_uv;\n\nvoid main()\n{\n    mat4 skinMatrix = \n        weight.x * u_jointMatrix.matrix[int(joint.x)] +\n        weight.y * u_jointMatrix.matrix[int(joint.y)] +\n        weight.z * u_jointMatrix.matrix[int(joint.z)] +\n        weight.w * u_jointMatrix.matrix[int(joint.w)];\n\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\n    v_uv = uv;\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;\n}"
-
-/***/ }),
-/* 33 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n#define NORMAL_LOCATION 1\n#define TEXCOORD_0_LOCATION 2\n#define JOINTS_0_LOCATION 3\n#define JOINTS_1_LOCATION 5\n#define WEIGHTS_0_LOCATION 4\n#define WEIGHTS_1_LOCATION 6\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\nuniform mat4 u_MVNormal;\n\nuniform JointMatrix\n{\n    mat4 matrix[32];\n} u_jointMatrix;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\nlayout(location = NORMAL_LOCATION) in vec3 normal;\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\n\nout vec3 v_normal;\nout vec2 v_uv;\n\nvoid main()\n{\n    mat4 skinMatrix = \n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)] +\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\n    \n    \n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\n    v_uv = uv;\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0) ;\n}"
 
 /***/ })
 /******/ ]);

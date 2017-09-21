@@ -233,7 +233,7 @@ import '../css/style.css';
 
     var BRDF_LUT = {
         texture: null,
-        textureIndex: 13,
+        textureIndex: 29,
 
         createTexture: function (img) {
             this.texture = gl.createTexture();
@@ -258,11 +258,11 @@ import '../css/style.css';
 
     // Environment maps
     var CUBE_MAP = {
-        textureIndex: 15,
+        textureIndex: 31,
         texture: null,
 
         // IBL
-        textureIBLDiffuseIndex: 14,
+        textureIBLDiffuseIndex: 30,
         textureIBLDiffuse: null,
 
         // loading asset --------------------
@@ -342,19 +342,6 @@ import '../css/style.css';
 
             // @tmp
             BRDF_LUT.createTexture(this.images[this.images.length - 1]);
-
-            // @hack
-            gl.useProgram(programPBR.program);
-            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
-            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
-            gl.uniform1i(programPBR.uniformBrdfLUTLocation, BRDF_LUT.textureIndex);
-            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
-            gl.uniform1i(programPBR.uniformSpecularEnvSamplerLocation, CUBE_MAP.textureIndex);
-            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-            gl.uniform1i(programPBR.uniformDiffuseEnvSamplerLocation, CUBE_MAP.textureIBLDiffuseIndex);
-            gl.useProgram(null);
 
             if (this.finishLoadingCallback) {
                 this.finishLoadingCallback();
@@ -490,6 +477,9 @@ import '../css/style.css';
         this.programObject = null;
     };
 
+    Shader.prototype.hasSkin = function() {
+        return this.flags & Shader_Static.bitMasks.HAS_SKIN;
+    };
     Shader.prototype.hasBaseColorMap = function() {
         return this.flags & Shader_Static.bitMasks.HAS_BASECOLORMAP;
     };
@@ -505,6 +495,7 @@ import '../css/style.css';
     Shader.prototype.hasEmissiveMap = function() {
         return this.flags & Shader_Static.bitMasks.HAS_EMISSIVEMAP;
     };
+
 
     Shader.prototype.defineMacro = function(macro) {
         if (Shader_Static.bitMasks[macro] !== undefined) {
@@ -621,121 +612,6 @@ import '../css/style.css';
         Shader_Static.programObjects[this.flags] = this.programObject;
     };
 
-
-
-
-
-
-
-
-
-
-
-
-
-    // // -- Initialize program
-
-    var program = createProgram(gl, require('./shaders/vs-normal.glsl'), require('./shaders/fs-base-color.glsl'));
-    var programBaseColor = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor")
-    };
-
-    program = createProgram(gl, require('./shaders/vs-texture.glsl'), require('./shaders/fs-texture.glsl'));
-    var programBaseTexture = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture")
-    };
-
-    // @temp test
-    program = createProgram(gl, require('./shaders/vs-texture.glsl'), require('./shaders/fs-texture-normal-map.glsl'));
-    var programBaseTextureNormalMap = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        // uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
-        uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture")
-    };
-
-    // @temp PBR
-    program = createProgram(gl, require('./shaders/vs-pbr.glsl'), require('./shaders/fs-pbr.glsl'));
-    var programPBR = {
-        program: program,
-
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-
-        uniformNormalTextureScaleLocation: gl.getUniformLocation(program, "u_normalTextureScale"),
-        uniformNormalTextureLocation: gl.getUniformLocation(program, "u_normalTexture"),
-
-        uniformDiffuseEnvSamplerLocation: gl.getUniformLocation(program, "u_DiffuseEnvSampler"),
-        uniformSpecularEnvSamplerLocation: gl.getUniformLocation(program, "u_SpecularEnvSampler"),
-        uniformBrdfLUTLocation: gl.getUniformLocation(program, "u_brdfLUT"),
-        
-        
-        uniformMetallicRoughnessTextureLocation: gl.getUniformLocation(program, "u_metallicRoughnessTexture"),
-        uniformMetallicFactorLocation: gl.getUniformLocation(program, "u_metallicFactor"),
-        uniformRoughnessFactorLocation: gl.getUniformLocation(program, "u_roughnessFactor"),
-
-        uniformOcclusionTextureLocation: gl.getUniformLocation(program, "u_occlusionTexture"),
-        uniformOcclusionStrengthLocation: gl.getUniformLocation(program, "u_occlusionStrength"),
-
-        uniformEmissiveTextureLocation: gl.getUniformLocation(program, "u_emissiveTexture"),
-        uniformEmissiveFactorLocation: gl.getUniformLocation(program, "u_emissiveFactor")
-    };
-
-    
-
-
-
-    program = createProgram(gl, require('./shaders/vs-skin-normal.glsl'), require('./shaders/fs-base-color.glsl'));
-    var programSkinBaseColor = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    program = createProgram(gl, require('./shaders/vs-skin-normal-8.glsl'), require('./shaders/fs-base-color.glsl'));
-    var programSkinBaseColorVec8 = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    // temp
-    program = createProgram(gl, require('./shaders/vs-skin-texture.glsl'), require('./shaders/fs-texture.glsl'));
-    var programSkinBaseTexture = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
-    program = createProgram(gl, require('./shaders/vs-skin-texture-8.glsl'), require('./shaders/fs-texture.glsl'));
-    var programSkinBaseTextureVec8 = {
-        program: program,
-        uniformMvpLocation: gl.getUniformLocation(program, "u_MVP"),
-        uniformMvNormalLocation: gl.getUniformLocation(program, "u_MVNormal"),
-        uniformBaseColorFactorLocation: gl.getUniformLocation(program, "u_baseColorFactor"),
-        uniformBaseColorTextureLocation: gl.getUniformLocation(program, "u_baseColorTexture"),
-        uniformBlockIndexJointMatrix: gl.getUniformBlockIndex(program, "JointMatrix")
-    };
-
     // -- Initialize vertex array
     var POSITION_LOCATION = 0; // set with GLSL layout qualifier
     var NORMAL_LOCATION = 1; // set with GLSL layout qualifier
@@ -809,7 +685,7 @@ import '../css/style.css';
 
     
     // 2.0
-    var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
@@ -921,22 +797,6 @@ import '../css/style.css';
         var animation, animationSampler, channel;
 
         var skin;
-
-        // var curScene;   // runtime scene object (not gltf scene object)
-
-        program = programBaseColor;
-
-
-
-        // // animations typed array
-        // for (i = 0, len = glTF.animations.length; i < len; i++) {
-        //     animation = glTF.animations[i];
-
-            
-        // }
-
-        
-
 
         // create buffers
         for (i = 0, len = glTF.bufferViews.length; i < len; i++) {
@@ -1101,6 +961,8 @@ import '../css/style.css';
 
     var Renderer = Renderer || {};
 
+    var program = null;
+
     (function() {
         'use strict';
 
@@ -1126,7 +988,6 @@ import '../css/style.css';
 
         var hasSkin = false;
         var uniformBlockID;     // same for uniform block binding id
-
 
         var curScene;
 
@@ -1174,209 +1035,68 @@ import '../css/style.css';
 
             var texture, sampler;
             var baseColor = defaultColor;
-            // hasSkin = false;
-            if (hasSkin) {
-                if (primitive.material !== null) {
 
-                    if (primitive.material.pbrMetallicRoughness !== null) {
-                        
-
-                        if ( primitive.material.pbrMetallicRoughness.baseColorTexture ) {
-
-                            if (primitive.attributes.JOINTS_1 === undefined) {
-                                if (program != programSkinBaseTexture) {
-                                    gl.useProgram(programSkinBaseTexture.program);
-                                    program = programSkinBaseTexture;
-                                }
-                            } else {
-                                if (program != programSkinBaseTextureVec8) {
-                                    gl.useProgram(programSkinBaseTextureVec8.program);
-                                    program = programSkinBaseTextureVec8;
-                                }
-                            }
-
-                            gl.uniform1i(program.uniformBaseColorTextureLocation, primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            gl.activeTexture(gl.TEXTURE0 + primitive.material.pbrMetallicRoughness.baseColorTexture.index);
-                            // gl.activeTexture(gl.TEXTURE1);
-                            texture = curScene.glTF.textures[ primitive.material.pbrMetallicRoughness.baseColorTexture.index ];
-                            gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                            if (texture.sampler) {
-                                sampler = texture.sampler.sampler;
-                            } else {
-                                sampler = defaultSampler;
-                            }
-
-                            gl.bindSampler(primitive.material.pbrMetallicRoughness.baseColorTexture.index, sampler);
-
-                            if (primitive.material.pbrMetallicRoughness.baseColorFactor) {
-                                baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-                            }
-                        } else if ( primitive.material.pbrMetallicRoughness.baseColorFactor ) {
-                            baseColor = primitive.material.pbrMetallicRoughness.baseColorFactor;
-
-                            if (primitive.attributes.JOINTS_1 === undefined) {
-                                if (program != programSkinBaseColor) {
-                                    gl.useProgram(programSkinBaseColor.program);
-                                    program = programSkinBaseColor;
-                                }
-                            } else {
-                                if (program != programSkinBaseColorVec8) {
-                                    gl.useProgram(programSkinBaseColorVec8.program);
-                                    program = programSkinBaseColorVec8;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, uniformBlockID);
-            } else {
-
-                if (primitive.material !== null) {
-                    if (primitive.material.pbrMetallicRoughness !== null) {
-                        var material = primitive.material;
-                        var pbrMetallicRoughness = primitive.material.pbrMetallicRoughness;
-                        // @tmp: ugly code...
-                        if (
-                            pbrMetallicRoughness.baseColorTexture
-                            // && pbrMetallicRoughness.metallicRoughnessTexture
-                            // && material.occlusionTexture
-                            // && material.emissiveTexture
-                        ) {
-                            // PBR dynamic texture test field
-
-                            // if (program != programPBR) {
-                            //     program = programPBR;
-                            //     gl.useProgram(program.program);
-                            // }
-
-                            var shader = primitive.shader;
-
-                            if (program != primitive.shader.programObject) {
-                                program = primitive.shader.programObject;
-                                gl.useProgram(program.program);
-                            }
-
-                            // base color texture
-                            if (shader.hasBaseColorMap()) {
-                                activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
-                            }
-
-                            // normal texture
-                            if (shader.hasNormalMap()) {
-                                activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
-                                gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
-                            }
-
-                            // metallic roughness texture
-                            if (shader.hasMetalRoughnessMap()) {
-                                activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
-                            }
-                            
-                            gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
-                            gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
-
-                            // occlusion texture
-                            if (shader.hasOcclusionMap()) {
-                                activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
-                                gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
-                            }
-
-                            // emissive texture
-                            if (shader.hasEmissiveMap()) {
-                                activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
-                                gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
-                            }
-                            
-                            // TODO: skin JointMatrix uniform block
-
-                            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
-                            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
-
-                            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
-                            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
-
-                            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
-                            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-
-                            baseColor = pbrMetallicRoughness.baseColorFactor;
-
-                            gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
-                            
-                            gl.uniformMatrix4fv(program.uniformLocations.MVP, false, localMVP);
-                            gl.uniformMatrix4fv(program.uniformLocations.MVNormal, false, localMVNormal);
-                
-                            gl.bindVertexArray(primitive.vertexArray);
-                
-                            // TODO: when no indices, do drawArrays
-                            gl.drawElements(primitive.mode, primitive.indicesLength, primitive.indicesComponentType, primitive.indicesOffset);
-                            // gl.drawElements(primitive.mode, 3, primitive.indicesComponentType, primitive.indicesOffset);
-                
-                            gl.bindVertexArray(null);
-                            return;
-
-                        } else {
-
-                            if ( pbrMetallicRoughness.baseColorTexture ) {
-                                if (primitive.material.normalTexture) {
-                                    if (program != programBaseTextureNormalMap) {
-                                        gl.useProgram(programBaseTextureNormalMap.program);
-                                        program = programBaseTextureNormalMap;
-                                    }
-
-                                    gl.uniform1i(program.uniformNormalTextureLocation, primitive.material.normalTexture.index);
-                                    gl.activeTexture(gl.TEXTURE0 + primitive.material.normalTexture.index);
-                                    texture = curScene.glTF.textures[ primitive.material.normalTexture.index ];
-                                    gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                    if (texture.sampler) {
-                                        sampler = texture.sampler.sampler;
-                                    } else {
-                                        sampler = defaultSampler;
-                                    }
-
-                                    gl.bindSampler(primitive.material.normalTexture.index, sampler);
-                                } else {
-                                    if (program != programBaseTexture) {
-                                        gl.useProgram(programBaseTexture.program);
-                                        program = programBaseTexture;
-                                    }
-                                }
-
-
-                                gl.uniform1i(program.uniformBaseColorTextureLocation, pbrMetallicRoughness.baseColorTexture.index);
-                                gl.activeTexture(gl.TEXTURE0 + pbrMetallicRoughness.baseColorTexture.index);
-                                texture = curScene.glTF.textures[ pbrMetallicRoughness.baseColorTexture.index ];
-                                gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-                                if (texture.sampler) {
-                                    sampler = texture.sampler.sampler;
-                                } else {
-                                    sampler = defaultSampler;
-                                }
-
-                                gl.bindSampler(pbrMetallicRoughness.baseColorTexture.index, sampler);
-
-                                if (pbrMetallicRoughness.baseColorFactor) {
-                                    baseColor = pbrMetallicRoughness.baseColorFactor;
-                                }
-                            } else if (pbrMetallicRoughness.baseColorFactor) {
-                                baseColor = pbrMetallicRoughness.baseColorFactor;
-                                if (program != programBaseColor) {
-                                    gl.useProgram(programBaseColor.program);
-                                    program = programBaseColor;
-                                }
-                            }
-
-                        }
-
-                    }
-                }
-
+            var shader = primitive.shader;
+            var material = primitive.material;
+            var pbrMetallicRoughness = material.pbrMetallicRoughness;
+            
+            if (program != primitive.shader.programObject) {
+                program = primitive.shader.programObject;
+                gl.useProgram(program.program);
             }
 
-            gl.uniform4fv(program.uniformBaseColorFactorLocation, baseColor);
+            // base color texture
+            if (shader.hasBaseColorMap()) {
+                activeAndBindTexture(program.uniformLocations.baseColorTexture, pbrMetallicRoughness.baseColorTexture);
+            }
 
-            gl.uniformMatrix4fv(program.uniformMvpLocation, false, localMVP);
-            gl.uniformMatrix4fv(program.uniformMvNormalLocation, false, localMVNormal);
+            // normal texture
+            if (shader.hasNormalMap()) {
+                activeAndBindTexture(program.uniformLocations.normalTexture, material.normalTexture);
+                gl.uniform1f(program.uniformLocations.normalTextureScale, material.normalTexture.scale);
+            }
+
+            // metallic roughness texture
+            if (shader.hasMetalRoughnessMap()) {
+                activeAndBindTexture(program.uniformLocations.metallicRoughnessTexture, pbrMetallicRoughness.metallicRoughnessTexture);
+            }
+            
+            gl.uniform1f(program.uniformLocations.metallicFactor, pbrMetallicRoughness.metallicFactor);
+            gl.uniform1f(program.uniformLocations.roughnessFactor, pbrMetallicRoughness.roughnessFactor);
+
+            // occlusion texture
+            if (shader.hasOcclusionMap()) {
+                activeAndBindTexture(program.uniformLocations.occlusionTexture, material.occlusionTexture);
+                gl.uniform1f(program.uniformLocations.occlusionStrength, material.occlusionTexture.strength);
+            }
+
+            // emissive texture
+            if (shader.hasEmissiveMap()) {
+                activeAndBindTexture(program.uniformLocations.emissiveTexture, material.emissiveTexture);
+                gl.uniform3fv(program.uniformLocations.emissiveFactor, material.emissiveFactor);
+            }
+            
+            // TODO: skin JointMatrix uniform block
+            if (shader.hasSkin()) {
+                gl.uniformBlockBinding(program.program, program.uniformBlockIndices.JointMatrix, uniformBlockID);
+            }
+            
+
+            gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
+            gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
+
+            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
+
+            gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
+
+            baseColor = pbrMetallicRoughness.baseColorFactor;
+
+            gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
+            
+            gl.uniformMatrix4fv(program.uniformLocations.MVP, false, localMVP);
+            gl.uniformMatrix4fv(program.uniformLocations.MVNormal, false, localMVNormal);
 
             gl.bindVertexArray(primitive.vertexArray);
 
@@ -1388,8 +1108,8 @@ import '../css/style.css';
 
         }
 
-        // function drawMesh(mesh, matrix) {
-        // }
+        
+
         var tmpMat4 = mat4.create();
         var inverseTransformMat4 = mat4.create();
         
@@ -1583,11 +1303,11 @@ import '../css/style.css';
                 }   
             }
 
-            // scene bounding box
-            mat4.mul(localMVP, scene.rootTransform, scene.glTFScene.boundingBox.transform);
-            mat4.mul(localMVP, VP, localMVP);
-            gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
-            gl.drawArrays(gl.LINES, 0, 24);
+            // // scene bounding box
+            // mat4.mul(localMVP, scene.rootTransform, scene.glTFScene.boundingBox.transform);
+            // mat4.mul(localMVP, VP, localMVP);
+            // gl.uniformMatrix4fv(BOUNDING_BOX.uniformMvpLocation, false, localMVP);
+            // gl.drawArrays(gl.LINES, 0, 24);
         }
         
 
@@ -1633,7 +1353,6 @@ import '../css/style.css';
 
             mat4.mul(VP, perspective, modelView);
 
-            gl.useProgram(program.program);
 
             for (i = 0, len = scenes.length; i < len; i++) {
                 curScene = scenes[i];
@@ -1651,7 +1370,6 @@ import '../css/style.css';
 
 
                 gl.bindVertexArray(null);
-                gl.useProgram(program.program);
             }
 
 
@@ -1659,7 +1377,7 @@ import '../css/style.css';
 
             CUBE_MAP.draw(modelView, perspective);
 
-
+            program = null;
 
             requestAnimationFrame(render);
             timeParameter += 0.01;

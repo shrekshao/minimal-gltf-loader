@@ -54,12 +54,14 @@ void main()
 #endif
 #endif
 
+    v_uv = uv;
+
 #ifdef HAS_SKIN
     v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);
+    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);
 #else
     v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);
+    gl_Position = u_MVP * vec4(position, 1.0);
 #endif
     
-    v_uv = uv;
-    gl_Position = u_MVP * vec4(position, 1.0) ;
 }
