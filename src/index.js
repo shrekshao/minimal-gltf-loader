@@ -695,37 +695,7 @@ var Utils = Utils || {};
     
     // 2.0
     // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
-
-    // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
-
-    // var gltfUrl = '../glTFs/glTF_version_2/RiggedSimple/glTF/RiggedSimple.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/RiggedFigure/glTF/RiggedFigure.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/BrainStem/glTF/BrainStem.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/CesiumMan/glTF/CesiumMan.gltf';
-
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Monster/glTF/Monster.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/mrdoob/rome-gltf/master/files/models/black_soup/quadruped_wolf.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/VC/glTF/VC.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Lantern/glTF/Lantern.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Corset/glTF/Corset.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF/Buggy.gltf';
     var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TextureSettingsTest/glTF/TextureSettingsTest.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/TwoSidedPlane/glTF/TwoSidedPlane.gltf';
-    // var gltfUrl = 'https://raw.githubusercontent.com/pjcozzi/pjcozzi.github.io/master/img/models/patrick.gltf';
-    
-    // var gltfUrl = 'https://raw.githubusercontent.com/shrekshao/glAvatar/master/demo/models/patrick_no_shirt/patrick-no-shirt.gltf';
-    // var gltfUrl = 'models/patrick_no_shirt/patrick-no-shirt.gltf';
-    // var gltfUrl = 'models/girl16/scene.gltf';
 
     var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
