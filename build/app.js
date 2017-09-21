@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 8);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -141,21 +141,19 @@ function equals(a, b) {
 
 
 /***/ }),
-/* 1 */,
-/* 2 */,
-/* 3 */
+/* 1 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(9);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(10);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(11);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(13);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(4);
 /* unused harmony reexport glMatrix */
 /* unused harmony reexport mat2 */
 /* unused harmony reexport mat2d */
@@ -206,7 +204,7 @@ THE SOFTWARE. */
 
 
 /***/ }),
-/* 4 */
+/* 2 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1013,7 +1011,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 5 */
+/* 3 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1853,7 +1851,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 6 */
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2515,15 +2513,14 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 7 */,
-/* 8 */
+/* 5 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(3);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__ = __webpack_require__(14);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__minimal_gltf_loader_js__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css__ = __webpack_require__(12);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__css_style_css___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__css_style_css__);
 
 // import {MinimalGLTFLoader} from 'Lib/minimal-gltf-loader.js';
@@ -2534,10 +2531,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 
 // utils
+var Utils = Utils || {};
 (function () {
     'use strict';
 
-    window.getShaderSource = function(id) {
+    Utils.getShaderSource = function(id) {
         return document.getElementById(id).textContent.replace(/^\s+|\s+$/g, '');
     };
 
@@ -2548,7 +2546,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         return shader;
     }
 
-    window.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
+    Utils.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
         var program = gl.createProgram();
         var vshader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
         var fshader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
@@ -2576,7 +2574,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         return program;
     };
 
-    window.loadImage = function(url, onload) {
+    var loadImage = Utils.loadImage = function(url, onload) {
         var img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = url;
@@ -2587,7 +2585,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         return img;
     };
 
-    window.loadImages = function(urls, onload) {
+    Utils.loadImages = function(urls, onload) {
         var imgs = [];
         var imgsToLoad = urls.length;
 
@@ -2602,16 +2600,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         }
     };
 
-    window.loadObj = function(url, onload) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'text';
-        xhr.onload = function(e) {
-            var mesh = new OBJ.Mesh(this.response);
-            onload(mesh);
-        };
-        xhr.send();
-    };
 })();
 
 
@@ -2703,8 +2691,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         vertexArray: gl.createVertexArray(),
         vertexBuffer: gl.createBuffer(),
 
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, __webpack_require__(20), __webpack_require__(21)),
+        program: Utils.createProgram(gl, __webpack_require__(17), __webpack_require__(18)),
         positionLocation: 0,
         uniformMvpLocation: 0, 
 
@@ -2816,7 +2803,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         images: null,
 
         loadAll: function() {
-            loadImages(this.uris, this.onloadAll.bind(this));
+            Utils.loadImages(this.uris, this.onloadAll.bind(this));
         },
 
         onloadAll: function(imgs) {
@@ -2924,12 +2911,10 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         ]),
 
         
-
         vertexArray: gl.createVertexArray(),
         vertexBuffer: gl.createBuffer(),
 
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, __webpack_require__(22), __webpack_require__(23)),
+        program: Utils.createProgram(gl, __webpack_require__(19), __webpack_require__(20)),
         positionLocation: 0,
         uniformMvpLocation: 0, 
         uniformEnvironmentLocation: 0,
@@ -2987,20 +2972,14 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             HAS_EMISSIVEMAP: 64
         },
 
-        vsMasterCode: __webpack_require__(24),
-        fsMasterCode: __webpack_require__(25),
+        vsMasterCode: __webpack_require__(21),
+        fsMasterCode: __webpack_require__(22),
 
         programObjects: {}    // < flags, Shader Object >
     };
 
     var Shader = function() {
-        // for PBR use only for now.
-
         this.flags = 0;
-
-        // this.vertexShaderSource = null;
-        // this.fragmentShaderSource = null;
-
         this.programObject = null;
     };
 
@@ -3083,7 +3062,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             Shader_Static.fsMasterCode;
 
         // compile
-        var program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+        var program = Utils.createProgram(gl, vertexShaderSource, fragmentShaderSource);
         this.programObject = {
             program: program,
     
@@ -3488,7 +3467,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
     var Renderer = Renderer || {};
 
-    var program = null;
+    var program = null; // current program object
 
     (function() {
         'use strict';
@@ -3673,9 +3652,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                 for (i = 0, len = joints.length; i < len; i++) {
                     jointNode = joints[i];
                     __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.inverseBindMatrix[i]);
-                    
-                    
-                    
                     __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["a" /* mat4 */].mul(tmpMat4, inverseTransformMat4, tmpMat4);
 
                     // if (skin.skeleton !== null) {
@@ -3686,17 +3662,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                 }
 
                 gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
-                // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
                 gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData, 0, skin.jointMatrixUnidormBufferData.length);
-
-                // if (program != programSkinBaseColor) {
-                //     gl.useProgram(programSkinBaseColor.program);
-                //     program = programSkinBaseColor;
-
-                //     // @todo: uniform bind
-                //     gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
-                // }
-                
             }
 
 
@@ -3734,9 +3700,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 
         var drawScene = Renderer.drawScene = function (scene) {
-            // for (var i = 0, len = scene.nodes.length; i < len; i++) {
-            //     drawNode( scene.nodes[i], scene.nodes[i].nodeID, rootTransform );
-            // }
             // animation
             var animation;
             var i, len, j, lenj;
@@ -3768,19 +3731,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                             __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* vec3 */].copy(node.scale, animationSampler.curValue);
                             break;
                         }
-                        // switch (channel.target.path) {
-                        //     case 'rotation':
-                        //     vec4.copy(node.rotation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'translation':
-                        //     vec3.copy(node.translation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'scale':
-                        //     vec3.copy(node.scale, animationSampler.curValue);
-                        //     break;
-                        // }
 
                         node.updateMatrixFromTRS();
                         
@@ -3838,15 +3788,12 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         }
         
 
+        var timeStampZero = performance.now();
         var timeParameter = 0;
-
-
-
-
 
         // -- Render loop
         // function render() {
-        var render = Renderer.render = function() {
+        var render = Renderer.render = function(timestamp) {
             var i, len;
             var j, lenj;
             var node;
@@ -3906,26 +3853,12 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
             program = null;
 
+            timeParameter = (timestamp - timeStampZero) * 0.001;
             requestAnimationFrame(render);
-            timeParameter += 0.01;
         }
 
     })();
 
-
-
-
-
-    // glTFLoader.loadGLTF(gltfUrl, function(glTF) {
-
-    //     setupScene(glTF);
-        
-
-    //     // render();
-    //     Renderer.render();
-        
-
-    // });
 
     CUBE_MAP.finishLoadingCallback = function() {
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
@@ -3940,7 +3873,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 
 /***/ }),
-/* 9 */
+/* 6 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4409,7 +4342,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 10 */
+/* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4910,7 +4843,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 11 */
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6648,7 +6581,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 12 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6669,9 +6602,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(4);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7339,7 +7272,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 13 */
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7981,12 +7914,12 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 14 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return MinimalGLTFLoader; });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_gl_matrix__ = __webpack_require__(1);
 
 
 var MinimalGLTFLoader = MinimalGLTFLoader || {};
@@ -9310,13 +9243,13 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
 
 /***/ }),
-/* 15 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(16);
+var content = __webpack_require__(13);
 if(typeof content === 'string') content = [[module.i, content, '']];
 // Prepare cssTransformation
 var transform;
@@ -9324,7 +9257,7 @@ var transform;
 var options = {}
 options.transform = transform
 // add the styles to the DOM
-var update = __webpack_require__(18)(content, options);
+var update = __webpack_require__(15)(content, options);
 if(content.locals) module.exports = content.locals;
 // Hot Module Replacement
 if(false) {
@@ -9341,10 +9274,10 @@ if(false) {
 }
 
 /***/ }),
-/* 16 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(17)(undefined);
+exports = module.exports = __webpack_require__(14)(undefined);
 // imports
 
 
@@ -9355,7 +9288,7 @@ exports.push([module.i, "body {\r\n    color: #cccccc;\r\n    font-family: Monos
 
 
 /***/ }),
-/* 17 */
+/* 14 */
 /***/ (function(module, exports) {
 
 /*
@@ -9437,7 +9370,7 @@ function toComment(sourceMap) {
 
 
 /***/ }),
-/* 18 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -9483,7 +9416,7 @@ var singleton = null;
 var	singletonCounter = 0;
 var	stylesInsertedAtTop = [];
 
-var	fixUrls = __webpack_require__(19);
+var	fixUrls = __webpack_require__(16);
 
 module.exports = function(list, options) {
 	if (typeof DEBUG !== "undefined" && DEBUG) {
@@ -9796,7 +9729,7 @@ function updateLink (link, options, obj) {
 
 
 /***/ }),
-/* 19 */
+/* 16 */
 /***/ (function(module, exports) {
 
 
@@ -9891,37 +9824,37 @@ module.exports = function (css) {
 
 
 /***/ }),
+/* 17 */
+/***/ (function(module, exports) {
+
+module.exports = "#version 300 es\r\n#define POSITION_LOCATION 0\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = u_MVP * vec4(position, 1.0) ;\r\n}"
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports) {
+
+module.exports = "#version 300 es\r\n#define FRAG_COLOR_LOCATION 0\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\r\n\r\nvoid main()\r\n{\r\n    color = vec4(1.0, 0.0, 0.0, 1.0);\r\n}"
+
+/***/ }),
+/* 19 */
+/***/ (function(module, exports) {
+
+module.exports = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\n\r\nlayout(location = 0) in vec3 position;\r\n\r\nout vec3 texcoord;\r\n\r\nvoid main()\r\n{\r\n    vec4 pos = u_MVP * vec4(position, 1.0);\r\n    gl_Position = pos.xyww;\r\n    texcoord = position;\r\n}"
+
+/***/ }),
 /* 20 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\n\nvoid main()\n{\n    gl_Position = u_MVP * vec4(position, 1.0) ;\n}"
+module.exports = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform samplerCube u_environment;\r\n\r\nin vec3 texcoord;\r\n\r\nout vec4 color;\r\n\r\nvoid main()\r\n{\r\n    color = texture(u_environment, texcoord);\r\n}"
 
 /***/ }),
 /* 21 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\n\nvoid main()\n{\n    color = vec4(1.0, 0.0, 0.0, 1.0);\n}"
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\n\nlayout(location = 0) in vec3 position;\n\nout vec3 texcoord;\n\nvoid main()\n{\n    vec4 pos = u_MVP * vec4(position, 1.0);\n    gl_Position = pos.xyww;\n    texcoord = position;\n}"
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports) {
-
-module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\n\nuniform samplerCube u_environment;\n\nin vec3 texcoord;\n\nout vec4 color;\n\nvoid main()\n{\n    color = texture(u_environment, texcoord);\n}"
-
-/***/ }),
-/* 24 */
-/***/ (function(module, exports) {
-
 module.exports = "#define POSITION_LOCATION 0\r\n#define NORMAL_LOCATION 1\r\n#define TEXCOORD_0_LOCATION 2\r\n#define JOINTS_0_LOCATION 3\r\n#define JOINTS_1_LOCATION 5\r\n#define WEIGHTS_0_LOCATION 4\r\n#define WEIGHTS_1_LOCATION 6\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\nuniform mat4 u_MVNormal;\r\n\r\n#ifdef HAS_SKIN\r\nuniform JointMatrix\r\n{\r\n    mat4 matrix[32];\r\n} u_jointMatrix;\r\n#endif\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\nlayout(location = NORMAL_LOCATION) in vec3 normal;\r\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\r\n\r\n#ifdef HAS_SKIN\r\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\r\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\r\n#ifdef SKIN_VEC8\r\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\r\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\r\n#endif\r\n#endif\r\n// TODO: tangents\r\n\r\nout vec3 v_normal;\r\nout vec2 v_uv;\r\n\r\nvoid main()\r\n{\r\n\r\n#ifdef HAS_SKIN\r\n    mat4 skinMatrix = \r\n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\r\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\r\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\r\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)];\r\n#ifdef SKIN_VEC8\r\n    skinMatrix +=\r\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\r\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\r\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\r\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\r\n#endif\r\n#endif\r\n\r\n    v_uv = uv;\r\n\r\n#ifdef HAS_SKIN\r\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\r\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);\r\n#else\r\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\r\n    gl_Position = u_MVP * vec4(position, 1.0);\r\n#endif\r\n    \r\n}"
 
 /***/ }),
-/* 25 */
+/* 22 */
 /***/ (function(module, exports) {
 
 module.exports = "#define FRAG_COLOR_LOCATION 0\r\n\r\n// reference: https://github.com/KhronosGroup/glTF-WebGL-PBR/blob/master/shaders/pbr-frag.glsl\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n// IBL\r\nuniform samplerCube u_DiffuseEnvSampler;\r\nuniform samplerCube u_SpecularEnvSampler;\r\nuniform sampler2D u_brdfLUT;\r\n\r\n// Metallic-roughness material\r\n\r\n// TODO: use #define string for a full and dynamic support renderer\r\n\r\n// base color\r\nuniform vec4 u_baseColorFactor;\r\n#ifdef HAS_BASECOLORMAP\r\nuniform sampler2D u_baseColorTexture;\r\n#endif\r\n\r\n// normal map\r\n#ifdef HAS_NORMALMAP\r\nuniform sampler2D u_normalTexture;\r\nuniform float u_normalScale;\r\n#endif\r\n\r\n// emmisve map\r\n#ifdef HAS_EMISSIVEMAP\r\nuniform sampler2D u_emissiveTexture;\r\nuniform vec3 u_emissiveFactor;\r\n#endif\r\n\r\n// metal roughness\r\n#ifdef HAS_METALROUGHNESSMAP\r\nuniform sampler2D u_metallicRoughnessTexture;\r\n#endif\r\nuniform float u_metallicFactor;\r\nuniform float u_roughnessFactor;\r\n\r\n// occlusion texture\r\n#ifdef HAS_OCCLUSIONMAP\r\nuniform sampler2D u_occlusionTexture;\r\nuniform float u_occlusionStrength;\r\n#endif\r\n\r\nin vec3 v_normal;\r\nin vec2 v_uv;\r\n\r\nlayout(location = FRAG_COLOR_LOCATION) out vec4 frag_color;\r\n\r\nstruct PBRInfo\r\n{\r\n    float NdotL;                  // cos angle between normal and light direction\r\n    float NdotV;                  // cos angle between normal and view direction\r\n    float NdotH;                  // cos angle between normal and half vector\r\n    float LdotH;                  // cos angle between light direction and half vector\r\n    float VdotH;                  // cos angle between view direction and half vector\r\n    float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)\r\n    float metalness;              // metallic value at the surface\r\n    vec3 reflectance0;            // full reflectance color (normal incidence angle)\r\n    vec3 reflectance90;           // reflectance color at grazing angle\r\n    float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])\r\n    vec3 diffuseColor;            // color contribution from diffuse lighting\r\n    vec3 specularColor;           // color contribution from specular lighting\r\n};\r\n\r\n\r\nvec3 applyNormalMap(vec3 geomnor, vec3 normap) {\r\n    normap = normap * 2.0 - 1.0;\r\n    vec3 up = normalize(vec3(0.001, 1, 0.001));\r\n    vec3 surftan = normalize(cross(geomnor, up));\r\n    vec3 surfbinor = cross(geomnor, surftan);\r\n    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;\r\n}\r\n\r\nconst float M_PI = 3.141592653589793;\r\nconst float c_MinRoughness = 0.04;\r\n\r\n\r\nvec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)\r\n{\r\n    // float mipCount = 9.0; // resolution of 512x512\r\n    float mipCount = 10.0; // resolution of 1024x1024\r\n    float lod = (pbrInputs.perceptualRoughness * mipCount);\r\n    // retrieve a scale and bias to F0. See [1], Figure 3\r\n    vec3 brdf = texture(u_brdfLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;\r\n    vec3 diffuseLight = texture(u_DiffuseEnvSampler, n).rgb;\r\n\r\n// #ifdef USE_TEX_LOD\r\n    vec3 specularLight = texture(u_SpecularEnvSampler, reflection, lod).rgb;\r\n// #else\r\n    // vec3 specularLight = texture(u_SpecularEnvSampler, reflection).rgb;\r\n// #endif\r\n\r\n    vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;\r\n    vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);\r\n\r\n    // // For presentation, this allows us to disable IBL terms\r\n    // diffuse *= u_ScaleIBLAmbient.x;\r\n    // specular *= u_ScaleIBLAmbient.y;\r\n\r\n    return diffuse + specular;\r\n}\r\n\r\n// Basic Lambertian diffuse\r\n// Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog\r\n// See also [1], Equation 1\r\nvec3 diffuse(PBRInfo pbrInputs)\r\n{\r\n    return pbrInputs.diffuseColor / M_PI;\r\n}\r\n\r\n\r\n// The following equation models the Fresnel reflectance term of the spec equation (aka F())\r\n// Implementation of fresnel from [4], Equation 15\r\nvec3 specularReflection(PBRInfo pbrInputs)\r\n{\r\n    return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance0) * pow(clamp(1.0 - pbrInputs.VdotH, 0.0, 1.0), 5.0);\r\n}\r\n\r\n\r\n// This calculates the specular geometric attenuation (aka G()),\r\n// where rougher material will reflect less light back to the viewer.\r\n// This implementation is based on [1] Equation 4, and we adopt their modifications to\r\n// alphaRoughness as input as originally proposed in [2].\r\nfloat geometricOcclusion(PBRInfo pbrInputs)\r\n{\r\n    float NdotL = pbrInputs.NdotL;\r\n    float NdotV = pbrInputs.NdotV;\r\n    float r = pbrInputs.alphaRoughness;\r\n\r\n    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));\r\n    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));\r\n    return attenuationL * attenuationV;\r\n}\r\n\r\n\r\n// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())\r\n// Implementation from \"Average Irregularity Representation of a Roughened Surface for Ray Reflection\" by T. S. Trowbridge, and K. P. Reitz\r\n// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.\r\nfloat microfacetDistribution(PBRInfo pbrInputs)\r\n{\r\n    float roughnessSq = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;\r\n    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;\r\n    return roughnessSq / (M_PI * f * f);\r\n}\r\n\r\n\r\n\r\n\r\n\r\n\r\nvoid main()\r\n{\r\n    float perceptualRoughness = u_roughnessFactor;\r\n    float metallic = u_metallicFactor;\r\n\r\n#ifdef HAS_METALROUGHNESSMAP\r\n    // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.\r\n    // This layout intentionally reserves the 'r' channel for (optional) occlusion map data\r\n    vec4 mrSample = texture(u_metallicRoughnessTexture, v_uv);\r\n    perceptualRoughness = mrSample.g * perceptualRoughness;\r\n    metallic = mrSample.b * metallic;\r\n#endif\r\n    perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);\r\n    metallic = clamp(metallic, 0.0, 1.0);\r\n    // Roughness is authored as perceptual roughness; as is convention,\r\n    // convert to material roughness by squaring the perceptual roughness [2].\r\n    float alphaRoughness = perceptualRoughness * perceptualRoughness;\r\n\r\n\r\n    // The albedo may be defined from a base texture or a flat color\r\n#ifdef HAS_BASECOLORMAP\r\n    vec4 baseColor = texture(u_baseColorTexture, v_uv) * u_baseColorFactor;\r\n#else\r\n    vec4 baseColor = u_baseColorFactor;\r\n#endif\r\n\r\n\r\n\r\n    vec3 f0 = vec3(0.04);\r\n    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);\r\n    diffuseColor *= 1.0 - metallic;\r\n    vec3 specularColor = mix(f0, baseColor.rgb, metallic);\r\n\r\n    // Compute reflectance.\r\n    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);\r\n\r\n\r\n    // For typical incident reflectance range (between 4% to 100%) set the grazing reflectance to 100% for typical fresnel effect.\r\n    // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.\r\n    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);\r\n    vec3 specularEnvironmentR0 = specularColor.rgb;\r\n    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;\r\n\r\n\r\n    // vec3 n = getNormal();                             // normal at surface point\r\n#ifdef HAS_NORMALMAP\r\n    vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );\r\n#else\r\n    vec3 n = v_normal;\r\n#endif\r\n    vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera\r\n    // vec3 l = normalize(u_LightDirection);             // Vector from surface point to light\r\n    vec3 l = vec3( 0.6, 0.8, 0.0 );             // Vector from surface point to light\r\n    vec3 h = normalize(l+v);                          // Half vector between both l and v\r\n    vec3 reflection = -normalize(reflect(v, n));\r\n\r\n    float NdotL = clamp(dot(n, l), 0.001, 1.0);\r\n    float NdotV = abs(dot(n, v)) + 0.001;\r\n    float NdotH = clamp(dot(n, h), 0.0, 1.0);\r\n    float LdotH = clamp(dot(l, h), 0.0, 1.0);\r\n    float VdotH = clamp(dot(v, h), 0.0, 1.0);\r\n\r\n    PBRInfo pbrInputs = PBRInfo(\r\n        NdotL,\r\n        NdotV,\r\n        NdotH,\r\n        LdotH,\r\n        VdotH,\r\n        perceptualRoughness,\r\n        metallic,\r\n        specularEnvironmentR0,\r\n        specularEnvironmentR90,\r\n        alphaRoughness,\r\n        diffuseColor,\r\n        specularColor\r\n    );\r\n\r\n    // Calculate the shading terms for the microfacet specular shading model\r\n    vec3 F = specularReflection(pbrInputs);\r\n    float G = geometricOcclusion(pbrInputs);\r\n    float D = microfacetDistribution(pbrInputs);\r\n\r\n    // Calculation of analytical lighting contribution\r\n    vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);\r\n    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);\r\n    // vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);\r\n    vec3 color = NdotL * (diffuseContrib + specContrib);    // assume light color vec3(1, 1, 1)\r\n\r\n    // Calculate lighting contribution from image based lighting source (IBL)\r\n// #ifdef USE_IBL\r\n    color += getIBLContribution(pbrInputs, n, reflection);\r\n// #endif\r\n\r\n\r\n    // Apply optional PBR terms for additional (optional) shading\r\n#ifdef HAS_OCCLUSIONMAP\r\n    float ao = texture(u_occlusionTexture, v_uv).r;\r\n    color = mix(color, color * ao, u_occlusionStrength);\r\n#endif\r\n\r\n#ifdef HAS_EMISSIVEMAP\r\n    vec3 emissive = texture(u_emissiveTexture, v_uv).rgb * u_emissiveFactor;\r\n    color += emissive;\r\n#endif\r\n\r\n    // // This section uses mix to override final color for reference app visualization\r\n    // // of various parameters in the lighting equation.\r\n    // color = mix(color, F, u_ScaleFGDSpec.x);\r\n    // color = mix(color, vec3(G), u_ScaleFGDSpec.y);\r\n    // color = mix(color, vec3(D), u_ScaleFGDSpec.z);\r\n    // color = mix(color, specContrib, u_ScaleFGDSpec.w);\r\n\r\n    // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);\r\n    // color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);\r\n    // color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);\r\n    // color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);\r\n\r\n    frag_color = vec4(color, baseColor.a);\r\n}"

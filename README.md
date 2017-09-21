@@ -2,9 +2,7 @@
 [![Build Status](https://travis-ci.org/shrekshao/minimal-gltf-loader.svg?branch=master)](https://travis-ci.org/shrekshao/minimal-gltf-loader)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/shrekshao/minimal-gltf-loader/blob/master/LICENSE.md)
 
-A minimal JavaScript glTF Loader without need of support from 3D engines like Three.js. 
-
-(:exclamation: In development, newly migrate to glTF 2, not backward compatible for now, really feature incomplete for now -_-)
+A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple renderer example using the loader.
 
 ## Viewer Screenshot
 ![](img/helmet-pbr.png)
@@ -51,7 +49,7 @@ A minimal JavaScript glTF Loader without need of support from 3D engines like Th
     * [x] baseColorTexture
     * [x] normalTexture
     * [x] Skybox
-    * [ ] PBR
+    * [x] PBR
     * [x] Animation
     * [x] Skin
     * [ ] Progressive rendering (No plan for this)

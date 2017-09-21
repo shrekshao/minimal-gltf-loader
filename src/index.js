@@ -7,10 +7,11 @@ import '../css/style.css';
 
 
 // utils
+var Utils = Utils || {};
 (function () {
     'use strict';
 
-    window.getShaderSource = function(id) {
+    Utils.getShaderSource = function(id) {
         return document.getElementById(id).textContent.replace(/^\s+|\s+$/g, '');
     };
 
@@ -21,7 +22,7 @@ import '../css/style.css';
         return shader;
     }
 
-    window.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
+    Utils.createProgram = function(gl, vertexShaderSource, fragmentShaderSource) {
         var program = gl.createProgram();
         var vshader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
         var fshader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
@@ -49,7 +50,7 @@ import '../css/style.css';
         return program;
     };
 
-    window.loadImage = function(url, onload) {
+    var loadImage = Utils.loadImage = function(url, onload) {
         var img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = url;
@@ -60,7 +61,7 @@ import '../css/style.css';
         return img;
     };
 
-    window.loadImages = function(urls, onload) {
+    Utils.loadImages = function(urls, onload) {
         var imgs = [];
         var imgsToLoad = urls.length;
 
@@ -75,16 +76,6 @@ import '../css/style.css';
         }
     };
 
-    window.loadObj = function(url, onload) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'text';
-        xhr.onload = function(e) {
-            var mesh = new OBJ.Mesh(this.response);
-            onload(mesh);
-        };
-        xhr.send();
-    };
 })();
 
 
@@ -176,8 +167,7 @@ import '../css/style.css';
         vertexArray: gl.createVertexArray(),
         vertexBuffer: gl.createBuffer(),
 
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, require('./shaders/vs-bbox.glsl'), require('./shaders/fs-bbox.glsl')),
+        program: Utils.createProgram(gl, require('./shaders/vs-bbox.glsl'), require('./shaders/fs-bbox.glsl')),
         positionLocation: 0,
         uniformMvpLocation: 0, 
 
@@ -289,7 +279,7 @@ import '../css/style.css';
         images: null,
 
         loadAll: function() {
-            loadImages(this.uris, this.onloadAll.bind(this));
+            Utils.loadImages(this.uris, this.onloadAll.bind(this));
         },
 
         onloadAll: function(imgs) {
@@ -397,12 +387,10 @@ import '../css/style.css';
         ]),
 
         
-
         vertexArray: gl.createVertexArray(),
         vertexBuffer: gl.createBuffer(),
 
-        // program: createProgram(gl, require('./shaders/vs-bbox'), require('./shaders/fs-bbox')),
-        program: createProgram(gl, require('./shaders/vs-cube-map.glsl'), require('./shaders/fs-cube-map.glsl')),
+        program: Utils.createProgram(gl, require('./shaders/vs-cube-map.glsl'), require('./shaders/fs-cube-map.glsl')),
         positionLocation: 0,
         uniformMvpLocation: 0, 
         uniformEnvironmentLocation: 0,
@@ -467,13 +455,7 @@ import '../css/style.css';
     };
 
     var Shader = function() {
-        // for PBR use only for now.
-
         this.flags = 0;
-
-        // this.vertexShaderSource = null;
-        // this.fragmentShaderSource = null;
-
         this.programObject = null;
     };
 
@@ -556,7 +538,7 @@ import '../css/style.css';
             Shader_Static.fsMasterCode;
 
         // compile
-        var program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+        var program = Utils.createProgram(gl, vertexShaderSource, fragmentShaderSource);
         this.programObject = {
             program: program,
     
@@ -961,7 +943,7 @@ import '../css/style.css';
 
     var Renderer = Renderer || {};
 
-    var program = null;
+    var program = null; // current program object
 
     (function() {
         'use strict';
@@ -1146,9 +1128,6 @@ import '../css/style.css';
                 for (i = 0, len = joints.length; i < len; i++) {
                     jointNode = joints[i];
                     mat4.mul(tmpMat4, nodeMatrix[jointNode.nodeID], skin.inverseBindMatrix[i]);
-                    
-                    
-                    
                     mat4.mul(tmpMat4, inverseTransformMat4, tmpMat4);
 
                     // if (skin.skeleton !== null) {
@@ -1159,17 +1138,7 @@ import '../css/style.css';
                 }
 
                 gl.bindBuffer(gl.UNIFORM_BUFFER, skin.jointMatrixUniformBuffer);
-                // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData);
                 gl.bufferSubData(gl.UNIFORM_BUFFER, 0, skin.jointMatrixUnidormBufferData, 0, skin.jointMatrixUnidormBufferData.length);
-
-                // if (program != programSkinBaseColor) {
-                //     gl.useProgram(programSkinBaseColor.program);
-                //     program = programSkinBaseColor;
-
-                //     // @todo: uniform bind
-                //     gl.uniformBlockBinding(program.program, program.uniformBlockIndexJointMatrix, 0);
-                // }
-                
             }
 
 
@@ -1207,9 +1176,6 @@ import '../css/style.css';
 
 
         var drawScene = Renderer.drawScene = function (scene) {
-            // for (var i = 0, len = scene.nodes.length; i < len; i++) {
-            //     drawNode( scene.nodes[i], scene.nodes[i].nodeID, rootTransform );
-            // }
             // animation
             var animation;
             var i, len, j, lenj;
@@ -1241,19 +1207,6 @@ import '../css/style.css';
                             vec3.copy(node.scale, animationSampler.curValue);
                             break;
                         }
-                        // switch (channel.target.path) {
-                        //     case 'rotation':
-                        //     vec4.copy(node.rotation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'translation':
-                        //     vec3.copy(node.translation, animationSampler.curValue);
-                        //     break;
-
-                        //     case 'scale':
-                        //     vec3.copy(node.scale, animationSampler.curValue);
-                        //     break;
-                        // }
 
                         node.updateMatrixFromTRS();
                         
@@ -1311,15 +1264,12 @@ import '../css/style.css';
         }
         
 
+        var timeStampZero = performance.now();
         var timeParameter = 0;
-
-
-
-
 
         // -- Render loop
         // function render() {
-        var render = Renderer.render = function() {
+        var render = Renderer.render = function(timestamp) {
             var i, len;
             var j, lenj;
             var node;
@@ -1379,26 +1329,12 @@ import '../css/style.css';
 
             program = null;
 
+            timeParameter = (timestamp - timeStampZero) * 0.001;
             requestAnimationFrame(render);
-            timeParameter += 0.01;
         }
 
     })();
 
-
-
-
-
-    // glTFLoader.loadGLTF(gltfUrl, function(glTF) {
-
-    //     setupScene(glTF);
-        
-
-    //     // render();
-    //     Renderer.render();
-        
-
-    // });
 
     CUBE_MAP.finishLoadingCallback = function() {
         glTFLoader.loadGLTF(gltfUrl, function(glTF) {
