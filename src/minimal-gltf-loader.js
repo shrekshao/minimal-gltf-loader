@@ -6,7 +6,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
 
     var globalUniformBlockID = 0;
 
-    // var curGltfModel = null;
     var curLoader = null;       // @tmp, might be unsafe if loading multiple model at the same time
 
     // Data classes
@@ -217,8 +216,6 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         // runtime stuffs--------------
 
         this.aabb = null;   // axis aligned bounding box, not need to apply node transform to aabb
-
-        // this.bvh = null;    // bbox of all children, used for (occlusion culling)
         this.bvh = new BoundingBox();
     };
 
@@ -244,26 +241,13 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         execFunPos(this, parent);
     };
 
-
-    // var translationVec3 = vec3.create();
-    // var rotationQuat = quat.create();
-    // var scaleVec3 = vec3.create();
     var TRSMatrix = mat4.create();
 
     Node.prototype.getTransformMatrixFromTRS = function(translation, rotation, scale) {
 
-        // this.translation = translation !== undefined ? translation : [0, 0, 0];
-        // this.rotation = rotation !== undefined ? rotation : [0, 0, 0, 1];
-        // this.scale = scale !== undefined ? scale : [1, 1, 1];
         this.translation = translation !== undefined ? vec3.fromValues(translation[0], translation[1], translation[2]) : vec3.fromValues(0, 0, 0);
         this.rotation = rotation !== undefined ? vec4.fromValues(rotation[0], rotation[1], rotation[2], rotation[3]) : vec4.fromValues(0, 0, 0, 1);
         this.scale = scale !== undefined ? vec3.fromValues(scale[0], scale[1], scale[2]) : vec3.fromValues(1, 1, 1);
-
-        // vec3.set(translationVec3, this.translation[0], this.translation[1], this.translation[2]);
-        // quat.set(rotationQuat, this.rotation[0], this.rotation[1], this.rotation[2], this.rotation[3]);
-        // vec3.set(scaleVec3, this.scale[0], this.scale[1], this.scale[2]);
-        // mat4.fromRotationTranslation(TRSMatrix, rotationQuat, translationVec3);
-        // mat4.scale(this.matrix, TRSMatrix, scaleVec3);
 
         this.updateMatrixFromTRS();
     };
