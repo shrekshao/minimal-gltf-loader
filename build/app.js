@@ -8081,6 +8081,20 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
     };
 
 
+    var Camera = MinimalGLTFLoader.Camera = function(c) {
+        this.name = c.name !== undefined ? c.name : null;
+        this.type = c.type; // required
+
+        this.othographic = c.othographic === undefined ? null : c.othographic;  // every attribute inside is required (excluding extensions)
+        this.perspective = c.perspective === undefined ? null : {
+            yfov: c.perspective.yfov,
+            znear: c.perspective.znear,
+            zfar: c.perspective.zfar !== undefined ? c.perspective.zfar : null,
+            aspectRatio: c.perspective.aspectRatio !== undefined ? c.perspective.aspectRatio : null
+        };
+    };
+
+
 
     var Node = MinimalGLTFLoader.Node = function (n, nodeID) {
         this.name = n.name !== undefined ? n.name : null;
@@ -8696,6 +8710,10 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
             this.animations = new Array(gltf.animations.length);
         }
 
+        if (gltf.cameras) {
+            this.cameras = new Array(gltf.cameras.length);
+        }
+
     };
 
 
@@ -8899,6 +8917,13 @@ var MinimalGLTFLoader = MinimalGLTFLoader || {};
         var scene, s;
         var node;
         var mesh, primitive, accessor;
+
+        // cameras
+        if (this.glTF.cameras) {
+            for (i = 0, leni = this.glTF.cameras.length; i < leni; i++) {
+                this.glTF.cameras[i] = new Camera(this.glTF.json.cameras[i]);
+            }
+        }
 
         // bufferviews
         if (this.glTF.bufferViews) {

@@ -27,12 +27,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
 * [x] Textures
 * [x] ~~Shader Loader~~ (not part of the core of glTF 2.0)
 * [x] Animations
-    * Interpolations
-        - [x] LINEAR
-        - [ ] STEP
-        - [ ] CATMULLROMSPLINE
-        - [ ] CUBICSPLINE
-* [ ] Cameras
+* [x] Cameras
 * [x] Materials
 * [x] Skins
 
@@ -51,7 +46,13 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
     * [x] Skybox
     * [x] PBR
     * [x] Animation
+        * Interpolations
+        - [x] LINEAR
+        - [ ] STEP
+        - [ ] CATMULLROMSPLINE
+        - [ ] CUBICSPLINE
     * [x] Skin
+    * [ ] Camera (from glTF)
     * [ ] Progressive rendering (No plan for this)
     * [ ] Occlusion Culling experiment 
         * [x] Bounding Box
