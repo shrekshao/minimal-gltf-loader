@@ -6,6 +6,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
 
 ## Viewer Screenshot
 ![](img/helmet-pbr.png)
+![](img/drone-pbr.png)
 ![](img/skin.gif)
 ![](img/viewer-screenshot-gear.png)
 ![](img/viewer-screenshot-buggy-bbox.png)
