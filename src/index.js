@@ -671,10 +671,10 @@ var Utils = Utils || {};
     // var gltfUrl = '../glTFs/glTF_version_2/2CylinderEngine/glTF/2CylinderEngine.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/GearboxAssy/glTF/GearboxAssy.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Buggy/glTF/Buggy.gltf';
-    // var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
+    var gltfUrl = '../glTFs/glTF_version_2/DamagedHelmet/glTF/DamagedHelmet.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/Avocado/glTF/Avocado.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/BoomBox/glTF/BoomBox.gltf';
-    var gltfUrl = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
+    // var gltfUrl = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
 
     // var gltfUrl = '../glTFs/glTF_version_2/BoxAnimated/glTF/BoxAnimated.gltf';
     // var gltfUrl = '../glTFs/glTF_version_2/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
