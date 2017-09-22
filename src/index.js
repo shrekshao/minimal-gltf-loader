@@ -97,7 +97,7 @@ var Utils = Utils || {};
         selectedGltfSampleModel = this.value;
         var uri;
         if (selectedGltfSampleModel == 'Drone') {
-            uri = '../glTFs/glTF_version_2/buster_drone/scene.gltf';
+            uri = 'https://raw.githubusercontent.com/shrekshao/minimal-gltf-loader/store-drone-model/glTFs/glTF_version_2/buster_drone/scene.gltf';
         } else {
             uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
             + selectedGltfSampleModel
