@@ -20,15 +20,11 @@ module.exports = {
     libraryTarget: 'umd'
   },
   externals: {
-    glMatrix: {
+    'gl-matrix': {
       commonjs: 'gl-matrix',
       commonjs2: 'gl-matrix',
       amd: 'gl-matrix'
     }
-    // vec3: ['gl-matrix', 'vec3'],
-    // vec4: ['gl-matrix', 'vec4'],
-    // quat: ['gl-matrix', 'quat'],
-    // mat4: ['gl-matrix', 'mat4']
   },
   module: {
     // rules: [
