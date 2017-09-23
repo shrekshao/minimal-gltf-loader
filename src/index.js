@@ -1,8 +1,5 @@
 import {vec3, vec4, quat, mat4} from 'gl-matrix';
-// import {MinimalGLTFLoader} from 'Lib/minimal-gltf-loader.js';
-// import {MinimalGLTFLoader} from './minimal-gltf-loader.js';
-// import {vec3, vec4, mat4, MinimalGLTFLoader} from '../build/minimal-gltf-loader.js';
-var mgl = require('../build/minimal-gltf-loader.js');
+var MinimalGLTFLoader = require('../build/minimal-gltf-loader.js');
 // require('./lib/minimal-gltf-loader.js');
 import '../css/style.css';
 
@@ -700,7 +697,7 @@ var Utils = Utils || {};
     // var gltfUrl = '../glTFs/glTF_version_2/Duck/glTF/Duck.gltf';
     var gltfUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf';
 
-    var glTFLoader = new mgl.MinimalGLTFLoader.glTFLoader(gl);
+    var glTFLoader = new MinimalGLTFLoader.glTFLoader(gl);
 
     var glTFModelCount = 1;
     var scenes = [];
