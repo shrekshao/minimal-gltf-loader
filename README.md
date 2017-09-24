@@ -10,6 +10,18 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
 ![](img/skin.gif)
 ![](img/viewer-screenshot-buggy-bbox.png)
 
+# Usage
+
+```javascript
+import {vec3, vec4, quat, mat4} from 'gl-matrix';
+var MinimalGLTFLoader = require('build/minimal-gltf-loader.js');
+
+var glTFLoader = new MinimalGLTFLoader.glTFLoader();
+glTFLoader.loadGLTF(url, function(glTF){
+    //...
+});
+```
+
 
 ## Loading Features
 
@@ -44,7 +56,7 @@ A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple ren
     * [x] Skybox
     * [x] PBR
     * [x] Animation
-    * Interpolations
+    * [ ] Interpolations
         - [x] LINEAR
         - [ ] STEP
         - [ ] CATMULLROMSPLINE
