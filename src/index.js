@@ -257,12 +257,12 @@ var Utils = Utils || {};
             gl.texImage2D(
                 gl.TEXTURE_2D,  // assumed
                 0,        // Level of details
-                // gl.RGB, // Format
-                // gl.RGB,
-                gl.RGBA, // Format
-                gl.RGBA,
-                gl.UNSIGNED_BYTE, // Size of each channel
-                // gl.FLOAT,
+                gl.RG16F, // Format
+                gl.RG,
+                // gl.RGBA, // Format
+                // gl.RGBA,
+                // gl.UNSIGNED_BYTE, // Size of each channel
+                gl.FLOAT,
                 img
             );
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -298,6 +298,20 @@ var Utils = Utils || {};
             '../textures/environment/diffuse/bakedDiffuse_04.jpg',
             '../textures/environment/diffuse/bakedDiffuse_05.jpg',
             '../textures/environment/diffuse/bakedDiffuse_06.jpg',
+
+            // '../textures/papermill/environment_right_0.jpg',
+            // '../textures/papermill/environment_left_0.jpg',
+            // '../textures/papermill/environment_top_0.jpg',
+            // '../textures/papermill/environment_bottom_0.jpg',
+            // '../textures/papermill/environment_front_0.jpg',
+            // '../textures/papermill/environment_back_0.jpg',
+
+            // '../textures/papermill/diffuse/diffuse_right_0.jpg',
+            // '../textures/papermill/diffuse/diffuse_left_0.jpg',
+            // '../textures/papermill/diffuse/diffuse_top_0.jpg',
+            // '../textures/papermill/diffuse/diffuse_bottom_0.jpg',
+            // '../textures/papermill/diffuse/diffuse_front_0.jpg',
+            // '../textures/papermill/diffuse/diffuse_back_0.jpg',
 
             // @tmp, ugly, load brdfLUT here
             '../textures/brdfLUT.png'
@@ -584,6 +598,7 @@ var Utils = Utils || {};
 
         us.MVP = gl.getUniformLocation(program, 'u_MVP');
         us.MVNormal = gl.getUniformLocation(program, 'u_MVNormal');
+        us.MV = gl.getUniformLocation(program, 'u_MV');
         us.baseColorFactor = gl.getUniformLocation(program, 'u_baseColorFactor');
         us.metallicFactor = gl.getUniformLocation(program, 'u_metallicFactor');
         us.roughnessFactor = gl.getUniformLocation(program, 'u_roughnessFactor');
@@ -1082,8 +1097,10 @@ var Utils = Utils || {};
 
             gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
             
+            gl.uniformMatrix4fv(program.uniformLocations.MV, false, localMV);
             gl.uniformMatrix4fv(program.uniformLocations.MVP, false, localMVP);
             gl.uniformMatrix4fv(program.uniformLocations.MVNormal, false, localMVNormal);
+            
 
             gl.bindVertexArray(primitive.vertexArray);
 

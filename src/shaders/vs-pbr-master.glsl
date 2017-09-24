@@ -5,11 +5,13 @@
 #define JOINTS_1_LOCATION 5
 #define WEIGHTS_0_LOCATION 4
 #define WEIGHTS_1_LOCATION 6
+#define TANGENT_LOCATION 7
 
 precision highp float;
 precision highp int;
 
 uniform mat4 u_MVP;
+uniform mat4 u_MV;
 uniform mat4 u_MVNormal;
 
 #ifdef HAS_SKIN
@@ -31,8 +33,17 @@ layout(location = JOINTS_1_LOCATION) in vec4 joint1;
 layout(location = WEIGHTS_1_LOCATION) in vec4 weight1;
 #endif
 #endif
-// TODO: tangents
 
+
+// #ifdef HAS_TANGENTS
+// layout(location = TANGENT_LOCATION) in vec4 tangent;
+
+// out vec3 v_tangentW;
+// out vec3 v_bitangentW;
+// #endif
+
+
+out vec3 v_position;
 out vec3 v_normal;
 out vec2 v_uv;
 
@@ -58,10 +69,15 @@ void main()
 
 #ifdef HAS_SKIN
     v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);
+    vec4 pos = u_MV * skinMatrix * vec4(position, 1.0);
     gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);
 #else
     v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);
+    vec4 pos = u_MV * vec4(position, 1.0);
     gl_Position = u_MVP * vec4(position, 1.0);
 #endif
+
+    v_position = vec3(pos.xyz) / pos.w;
+    
     
 }

@@ -12,8 +12,6 @@ uniform sampler2D u_brdfLUT;
 
 // Metallic-roughness material
 
-// TODO: use #define string for a full and dynamic support renderer
-
 // base color
 uniform vec4 u_baseColorFactor;
 #ifdef HAS_BASECOLORMAP
@@ -23,7 +21,7 @@ uniform sampler2D u_baseColorTexture;
 // normal map
 #ifdef HAS_NORMALMAP
 uniform sampler2D u_normalTexture;
-uniform float u_normalScale;
+uniform float u_normalTextureScale;
 #endif
 
 // emmisve map
@@ -45,6 +43,7 @@ uniform sampler2D u_occlusionTexture;
 uniform float u_occlusionStrength;
 #endif
 
+in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_uv;
 
@@ -67,22 +66,88 @@ struct PBRInfo
 };
 
 
-vec3 applyNormalMap(vec3 geomnor, vec3 normap) {
-    normap = normap * 2.0 - 1.0;
-    vec3 up = normalize(vec3(0.001, 1, 0.001));
-    vec3 surftan = normalize(cross(geomnor, up));
-    vec3 surfbinor = cross(geomnor, surftan);
-    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;
-}
+// vec3 applyNormalMap(vec3 geomnor, vec3 normap) {
+//     normap = normap * 2.0 - 1.0;
+//     vec3 up = normalize(vec3(0.01, 1, 0.01));
+//     vec3 surftan = normalize(cross(geomnor, up));
+//     vec3 surfbinor = cross(geomnor, surftan);
+//     return normap.y * surftan * u_normalTextureScale + normap.x * surfbinor * u_normalTextureScale + normap.z * geomnor;
+// }
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
 
 
+// vec3 getNormal()
+// {
+
+// #ifdef HAS_NORMALMAP
+// #ifdef HAS_TANGENTS
+//     vec3 n = texture(u_normalTexture, v_uv).rgb;
+//     n = normalize(v_TBN * (2.0 * n - 1.0) - vec3(u_normalTextureScale, u_normalTextureScale, 1.0));
+// #else
+//     vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+// #endif
+// #else
+//     vec3 n = v_normal;
+// #endif
+//     return n;
+
+// #endif
+// }
+
+// Find the normal for this fragment, pulling either from a predefined normal map
+// or from the interpolated mesh normal and tangent attributes.
+vec3 getNormal()
+{
+
+// #ifdef HAS_NORMALMAP
+//     vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
+// #else
+//     vec3 n = v_normal;
+// #endif
+//     return n;
+
+
+    // Retrieve the tangent space matrix
+// #ifndef HAS_TANGENTS
+    vec3 pos_dx = dFdx(v_position);
+    vec3 pos_dy = dFdy(v_position);
+    vec3 tex_dx = dFdx(vec3(v_uv, 0.0));
+    vec3 tex_dy = dFdy(vec3(v_uv, 0.0));
+    vec3 t = (tex_dy.t * pos_dx - tex_dx.t * pos_dy) / (tex_dx.s * tex_dy.t - tex_dy.s * tex_dx.t);
+
+    vec3 ng = v_normal;
+// #ifdef HAS_NORMALS
+//     vec3 ng = normalize(v_normal);
+// #else
+//     vec3 ng = cross(pos_dx, pos_dy);
+// #endif
+
+    t = normalize(t - ng * dot(ng, t));
+    vec3 b = normalize(cross(ng, t));
+    mat3 tbn = mat3(t, b, ng);
+// #else // HAS_TANGENTS
+    // mat3 tbn = v_TBN;
+// #endif
+
+// TODO: TANGENTS
+
+#ifdef HAS_NORMALMAP
+    vec3 n = texture(u_normalTexture, v_uv).rgb;
+    n = normalize(tbn * ((2.0 * n - 1.0) * vec3(u_normalTextureScale, u_normalTextureScale, 1.0)));
+#else
+    vec3 n = tbn[2].xyz;
+#endif
+
+    return n;
+}
+
 vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 {
     // float mipCount = 9.0; // resolution of 512x512
-    float mipCount = 10.0; // resolution of 1024x1024
+    // float mipCount = 10.0; // resolution of 1024x1024
+    float mipCount = 10.0; // resolution of 256x256
     float lod = (pbrInputs.perceptualRoughness * mipCount);
     // retrieve a scale and bias to F0. See [1], Figure 3
     vec3 brdf = texture(u_brdfLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;
@@ -196,15 +261,12 @@ void main()
     vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
 
 
-    // vec3 n = getNormal();                             // normal at surface point
-#ifdef HAS_NORMALMAP
-    vec3 n = applyNormalMap( v_normal, texture(u_normalTexture, v_uv).rgb );
-#else
-    vec3 n = v_normal;
-#endif
-    vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera
+    vec3 n = getNormal();                             // normal at surface point
+    // vec3 v = vec3( 0.0, 0.0, 1.0 );        // Vector from surface point to camera
+    vec3 v = normalize(-v_position);                       // Vector from surface point to camera
     // vec3 l = normalize(u_LightDirection);             // Vector from surface point to light
-    vec3 l = vec3( 0.6, 0.8, 0.0 );             // Vector from surface point to light
+    vec3 l = normalize(vec3( 1.0, 1.0, 1.0 ));             // Vector from surface point to light
+    // vec3 l = vec3( 0.0, 0.0, 1.0 );             // Vector from surface point to light
     vec3 h = normalize(l+v);                          // Half vector between both l and v
     vec3 reflection = -normalize(reflect(v, n));
 
