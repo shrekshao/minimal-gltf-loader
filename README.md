@@ -5,10 +5,14 @@
 A minimal, engine-agnostic JavaScript glTF Loader, with a raw WebGL 2 simple renderer example using the loader.
 
 ## Viewer Screenshot
+![](img/drone.gif)
 ![](img/helmet-pbr.png)
-![](img/drone-pbr.png)
 ![](img/skin.gif)
 ![](img/viewer-screenshot-buggy-bbox.png)
+
+## Live Demo
+
+[click here for live demo](https://shrekshao.github.io/minimal-gltf-loader/examples/webgl2-renderer.html)
 
 # Usage
 
