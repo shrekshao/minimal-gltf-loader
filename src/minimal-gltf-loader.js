@@ -14,6 +14,10 @@ var Scene = MinimalGLTFLoader.Scene = function (gltf, s) {
         this.nodes[i] = gltf.nodes[s.nodes[i]];
     }
 
+    this.extensions = s.extensions !== undefined ? s.extensions : null;
+    this.extras = s.extras !== undefined ? s.extras : null;
+
+
     this.boundingBox = null;
 };
 
@@ -115,6 +119,9 @@ var Accessor = MinimalGLTFLoader.Accessor = function (a, bufferViewObject) {
 
     this.min = a.min;   // @tmp assume required for now (for bbox)
     this.max = a.max;   // @tmp assume required for now (for bbox)
+
+    this.extensions = a.extensions !== undefined ? a.extensions : null;
+    this.extras = a.extras !== undefined ? a.extras : null;
 };
 
 Accessor.prototype.prepareVertexAttrib = function(location, gl) {
@@ -136,6 +143,9 @@ var BufferView = MinimalGLTFLoader.BufferView = function(bf, bufferData) {
     this.target = bf.target !== undefined ? bf.target : null;
 
     this.data = bufferData.slice(this.byteOffset, this.byteOffset + this.byteLength);
+
+    this.extensions = bf.extensions !== undefined ? bf.extensions : null;
+    this.extras = bf.extras !== undefined ? bf.extras : null;
 
     // runtime stuffs -------------
     this.buffer = null;     // gl buffer
@@ -167,6 +177,9 @@ var Camera = MinimalGLTFLoader.Camera = function(c) {
         zfar: c.perspective.zfar !== undefined ? c.perspective.zfar : null,
         aspectRatio: c.perspective.aspectRatio !== undefined ? c.perspective.aspectRatio : null
     };
+
+    this.extensions = c.extensions !== undefined ? c.extensions : null;
+    this.extras = c.extras !== undefined ? c.extras : null;
 };
 
 
@@ -210,6 +223,9 @@ var Node = MinimalGLTFLoader.Node = function (n, nodeID) {
     // TODO: morph targets weights
     this.weights = n.weights !== undefined ? n.weights : null;
 
+
+    this.extensions = n.extensions !== undefined ? n.extensions : null;
+    this.extras = n.extras !== undefined ? n.extras : null;
 
     // runtime stuffs--------------
 
@@ -292,7 +308,8 @@ var Mesh = MinimalGLTFLoader.Mesh = function (m, meshID) {
     // TODO: weights for morph targets
     this.weights = m.weights !== undefined ? m.weights : null;
 
-
+    this.extensions = m.extensions !== undefined ? m.extensions : null;
+    this.extras = m.extras !== undefined ? m.extras : null;
     
 };
 
@@ -342,6 +359,10 @@ var Primitive = MinimalGLTFLoader.Primitive = function (gltf, p) {
     this.targets = p.targets;
 
 
+    this.extensions = p.extensions !== undefined ? p.extensions : null;
+    this.extras = p.extras !== undefined ? p.extras : null;
+
+
     // ----gl run time related
     this.vertexArray = null;    //vao
     
@@ -381,6 +402,9 @@ var Texture = MinimalGLTFLoader.Texture = function (t) {
     this.sampler = t.sampler !== undefined ? curLoader.glTF.samplers[t.sampler] : null;
     this.source = t.source !== undefined ? curLoader.glTF.images[t.source] : null;
 
+    this.extensions = t.extensions !== undefined ? t.extensions : null;
+    this.extras = t.extras !== undefined ? t.extras : null;
+
     // runtime
     this.texture = null;
 };
@@ -409,6 +433,9 @@ var Sampler = MinimalGLTFLoader.Sampler = function (s) {
     this.wrapS = s.wrapS !== undefined ? s.wrapS : 10497;
     this.wrapT = s.wrapT !== undefined ? s.wrapT : 10497;
 
+    this.extensions = s.extensions !== undefined ? s.extensions : null;
+    this.extras = s.extras !== undefined ? s.extras : null;
+
     this.sampler = null;
 };
 
@@ -435,6 +462,9 @@ Sampler.prototype.createSampler = function(gl) {
 var TextureInfo = MinimalGLTFLoader.TextureInfo = function (json) {
     this.index = json.index;
     this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
+
+    this.extensions = json.extensions !== undefined ? json.extensions : null;
+    this.extras = json.extras !== undefined ? json.extras : null;
 };
 
 var PbrMetallicRoughness = MinimalGLTFLoader.PbrMetallicRoughness = function (json) {
@@ -443,18 +473,27 @@ var PbrMetallicRoughness = MinimalGLTFLoader.PbrMetallicRoughness = function (js
     this.metallicFactor = json.metallicFactor !== undefined ? json.metallicFactor : 1 ;
     this.roughnessFactor = json.roughnessFactor !== undefined ? json.roughnessFactor : 1 ;
     this.metallicRoughnessTexture = json.metallicRoughnessTexture !== undefined ? new TextureInfo(json.metallicRoughnessTexture): null;
+
+    this.extensions = json.extensions !== undefined ? json.extensions : null;
+    this.extras = json.extras !== undefined ? json.extras : null;
 };
 
 var NormalTextureInfo = MinimalGLTFLoader.NormalTextureInfo = function (json) {
     this.index = json.index;
     this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
     this.scale = json.scale !== undefined ? json.scale : 1 ;
+
+    this.extensions = json.extensions !== undefined ? json.extensions : null;
+    this.extras = json.extras !== undefined ? json.extras : null;
 };
 
 var OcclusionTextureInfo = MinimalGLTFLoader.OcclusionTextureInfo = function (json) {
     this.index = json.index;
     this.texCoord = json.texCoord !== undefined ? json.texCoord : 0 ;
     this.strength = json.strength !== undefined ? json.strength : 1 ;
+
+    this.extensions = json.extensions !== undefined ? json.extensions : null;
+    this.extras = json.extras !== undefined ? json.extras : null;
 };
 
 var Material = MinimalGLTFLoader.Material = function (m) {
@@ -474,6 +513,9 @@ var Material = MinimalGLTFLoader.Material = function (m) {
     this.alphaMode = m.alphaMode !== undefined ? m.alphaMode : "OPAQUE";
     this.alphaCutoff = m.alphaCutoff !== undefined ? m.alphaCutoff : 0.5;
     this.doubleSided = m.doubleSided || false;
+
+    this.extensions = m.extensions !== undefined ? m.extensions : null;
+    this.extras = m.extras !== undefined ? m.extras : null;
 };
 
 
@@ -489,6 +531,10 @@ var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
 
     this.skeleton = s.skeleton !== undefined ? gltf.nodes[s.skeleton] : null;
     this.inverseBindMatrices = s.inverseBindMatrices !== undefined ? gltf.accessors[s.inverseBindMatrices] : null;
+
+    this.extensions = s.extensions !== undefined ? s.extensions : null;
+    this.extras = s.extras !== undefined ? s.extras : null;
+
 
     // @tmp: runtime stuff should be taken care of renderer
     // since glTF model should only store info
@@ -510,7 +556,7 @@ var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(32 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
 
         for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(mat4.fromValues(
@@ -574,7 +620,7 @@ var SkinLink = MinimalGLTFLoader.SkinLink = function (gltf, linkedSkin, inverseB
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(32 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
 
         for (var i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(mat4.fromValues(
@@ -611,11 +657,17 @@ var SkinLink = MinimalGLTFLoader.SkinLink = function (gltf, linkedSkin, inverseB
 var Target = MinimalGLTFLoader.Target = function (t) {
     this.nodeID = t.node !== undefined ? t.node : null ;  //id, to be hooked up to object later
     this.path = t.path;     //required, string
+
+    this.extensions = t.extensions !== undefined ? t.extensions : null;
+    this.extras = t.extras !== undefined ? t.extras : null;
 };
 
 var Channel = MinimalGLTFLoader.Channel = function (c, animation) {
     this.sampler = animation.samplers[c.sampler];   //required
     this.target = new Target(c.target);     //required
+
+    this.extensions = c.extensions !== undefined ? c.extensions : null;
+    this.extras = c.extras !== undefined ? c.extras : null;
 };
 
 var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (gltf, s) {
@@ -632,6 +684,10 @@ var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (gltf, s) {
     // "CUBICSPLINE"
     this.interpolation = s.interpolation !== undefined ? s.interpolation : 'LINEAR' ;
     
+
+    this.extensions = s.extensions !== undefined ? s.extensions : null;
+    this.extras = s.extras !== undefined ? s.extras : null;
+
     // ------- extra runtime info -----------
     // runtime status thing
     this.curIdx = 0;
@@ -708,6 +764,9 @@ var Animation = MinimalGLTFLoader.Animation = function (gltf, a) {
     for (i = 0, len = a.channels.length; i < len; i++) {
         this.channels[i] = new Channel(a.channels[i], this);
     }
+
+    this.extensions = a.extensions !== undefined ? a.extensions : null;
+    this.extras = a.extras !== undefined ? a.extras : null;
 };
 
 
@@ -768,6 +827,9 @@ var glTFModel = MinimalGLTFLoader.glTFModel = function (gltf) {
     if (gltf.cameras) {
         this.cameras = new Array(gltf.cameras.length);
     }
+
+    this.extensions = gltf.extensions !== undefined ? gltf.extensions : null;
+    this.extras = gltf.extras !== undefined ? gltf.extras : null;
 
 };
 
@@ -909,7 +971,7 @@ glTFLoader.prototype._postprocess = function () {
     // if there's no plan for progressive loading (streaming)
     // than simply everything should be placed here
     
-    console.log('finish loading all assets, do a second pass postprocess');
+    // console.log('finish loading all assets, do a second pass postprocess');
     
     curLoader = this;
 
