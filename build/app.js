@@ -2616,6 +2616,14 @@ var Utils = Utils || {};
     var drawBoundingBox = false;
     var boundingBoxType = 'obb';
 
+    var curAnimationId = 0;
+    var playAllAnimationTogether = false;
+    var animationSelectionList = document.getElementById("animations");
+
+    animationSelectionList.addEventListener("change", function() {
+        curAnimationId = this.selectedIndex;
+    });
+
     document.getElementById("gltf-model").addEventListener("change", function() {
         // selectedGltfSampleModel = this.value;
         var uri = this.value;
@@ -2628,7 +2636,6 @@ var Utils = Utils || {};
         //     + selectedGltfSampleModel
         //     + '.gltf';
         // }
-        
 
         glTFLoader.loadGLTF(uri, function(glTF) {
             // var scene = scenes[0];
@@ -2643,6 +2650,10 @@ var Utils = Utils || {};
 
     document.getElementById("bbox-toggle").addEventListener("change", function() {
         drawBoundingBox = this.checked;
+    });
+
+    document.getElementById("play-all-animations").addEventListener("change", function() {
+        playAllAnimationTogether = this.checked;
     });
 
     document.getElementById("bbox-type").addEventListener("change", function() {
@@ -3252,6 +3263,21 @@ var Utils = Utils || {};
     function setupScene(glTF, replaceScene) {
         var i, len;
 
+        // update animation list
+        for(i = animationSelectionList.options.length - 1 ; i >= 0 ; i--) {
+            animationSelectionList.remove(i);
+        }
+        if (glTF.animations) {
+            var option;
+            for (i = 0, len = glTF.animations.length; i < len; i++) {
+                option = document.createElement("option");
+                option.text = glTF.animations[i].name || i;
+                animationSelectionList.add(option);
+            }    
+        }
+        curAnimationId = 0;
+
+        // ----------------
         
         var curGltfScene = glTF.scenes[glTF.defaultScene];
 
@@ -3726,42 +3752,53 @@ var Utils = Utils || {};
         }
 
 
+        function applyAnimation(animation, glTF) {
+            var j, lenj;
+            var channel, animationSampler, node;
+
+            for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
+                animation.samplers[j].getValue(timeParameter);
+            }
+
+            for (j = 0, lenj = animation.channels.length; j < lenj; j++) {
+                channel = animation.channels[j];
+                animationSampler = channel.sampler;
+                node = glTF.nodes[channel.target.nodeID];
+
+                switch (channel.target.path) {
+                    case 'rotation':
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec4"].copy(node.rotation, animationSampler.curValue);
+                    break;
+
+                    case 'translation':
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].copy(node.translation, animationSampler.curValue);
+                    break;
+
+                    case 'scale':
+                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].copy(node.scale, animationSampler.curValue);
+                    break;
+                }
+
+                node.updateMatrixFromTRS();
+                
+            }
+        }
+
         var drawScene = Renderer.drawScene = function (scene) {
             // animation
             var animation;
-            var i, len, j, lenj;
-            var channel, animationSampler, node;
+            var i, len;
 
             var glTF = scene.glTF;
             if (glTF.animations) {
-                for (i = 0, len = glTF.animations.length; i < len; i++) {
-                    animation = glTF.animations[i];
-                    for (j = 0, lenj = animation.samplers.length; j < lenj; j++) {
-                        animation.samplers[j].getValue(timeParameter);
+                if (playAllAnimationTogether) {
+                    for (i = 0, len = glTF.animations.length; i < len; i++) {
+                        animation = glTF.animations[i];
+                        applyAnimation(animation, glTF);
                     }
-
-                    for (j = 0, lenj = animation.channels.length; j < lenj; j++) {
-                        channel = animation.channels[j];
-                        animationSampler = channel.sampler;
-                        node = glTF.nodes[channel.target.nodeID];
-
-                        switch (channel.target.path) {
-                            case 'rotation':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec4"].copy(node.rotation, animationSampler.curValue);
-                            break;
-
-                            case 'translation':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].copy(node.translation, animationSampler.curValue);
-                            break;
-
-                            case 'scale':
-                            __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].copy(node.scale, animationSampler.curValue);
-                            break;
-                        }
-
-                        node.updateMatrixFromTRS();
-                        
-                    }
+                } else {
+                    animation = glTF.animations[curAnimationId];
+                    applyAnimation(animation, glTF);
                 }
             }
 
