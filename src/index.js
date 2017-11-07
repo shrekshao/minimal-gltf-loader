@@ -91,17 +91,17 @@ var Utils = Utils || {};
     var boundingBoxType = 'obb';
 
     document.getElementById("gltf-model").addEventListener("change", function() {
-        selectedGltfSampleModel = this.value;
-        var uri;
-        if (selectedGltfSampleModel == 'Drone') {
-            uri = 'https://raw.githubusercontent.com/shrekshao/minimal-gltf-loader/store-drone-model/glTFs/glTF_version_2/buster_drone/scene.gltf';
-        } else {
-            uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
-            + selectedGltfSampleModel
-            + '/glTF/'
-            + selectedGltfSampleModel
-            + '.gltf';
-        }
+        // selectedGltfSampleModel = this.value;
+        var uri = this.value;
+        // if (selectedGltfSampleModel == 'Drone') {
+        //     uri = 'https://raw.githubusercontent.com/shrekshao/minimal-gltf-loader/store-drone-model/glTFs/glTF_version_2/buster_drone/scene.gltf';
+        // } else {
+        //     uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
+        //     + selectedGltfSampleModel
+        //     + '/glTF/'
+        //     + selectedGltfSampleModel
+        //     + '.gltf';
+        // }
         
 
         glTFLoader.loadGLTF(uri, function(glTF) {

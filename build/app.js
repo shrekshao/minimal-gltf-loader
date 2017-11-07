@@ -2617,17 +2617,17 @@ var Utils = Utils || {};
     var boundingBoxType = 'obb';
 
     document.getElementById("gltf-model").addEventListener("change", function() {
-        selectedGltfSampleModel = this.value;
-        var uri;
-        if (selectedGltfSampleModel == 'Drone') {
-            uri = 'https://raw.githubusercontent.com/shrekshao/minimal-gltf-loader/store-drone-model/glTFs/glTF_version_2/buster_drone/scene.gltf';
-        } else {
-            uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
-            + selectedGltfSampleModel
-            + '/glTF/'
-            + selectedGltfSampleModel
-            + '.gltf';
-        }
+        // selectedGltfSampleModel = this.value;
+        var uri = this.value;
+        // if (selectedGltfSampleModel == 'Drone') {
+        //     uri = 'https://raw.githubusercontent.com/shrekshao/minimal-gltf-loader/store-drone-model/glTFs/glTF_version_2/buster_drone/scene.gltf';
+        // } else {
+        //     uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/'
+        //     + selectedGltfSampleModel
+        //     + '/glTF/'
+        //     + selectedGltfSampleModel
+        //     + '.gltf';
+        // }
         
 
         glTFLoader.loadGLTF(uri, function(glTF) {
@@ -8039,6 +8039,8 @@ var globalUniformBlockID = 0;
 
 var curLoader = null;       // @tmp, might be unsafe if loading multiple model at the same time
 
+var NUM_MAX_JOINTS = 65;
+
 // Data classes
 var Scene = MinimalGLTFLoader.Scene = function (gltf, s) {
     this.name = s.name !== undefined ? s.name : null;
@@ -8228,6 +8230,15 @@ var Node = MinimalGLTFLoader.Node = function (n, nodeID) {
         for(var i = 0; i < 16; ++i) {
             this.matrix[i] = n.matrix[i];
         }
+
+        this.translation = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].create();
+        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["mat4"].getTranslation(this.translation, this.matrix);
+
+        this.rotation = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["quat"].create();
+        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["mat4"].getRotation(this.rotation, this.matrix);
+
+        this.scale = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].create();
+        __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["mat4"].getScaling(this.scale, this.matrix);
     } else {
         // this.translation = null;
         // this.rotation = null;
@@ -8589,7 +8600,7 @@ var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(NUM_MAX_JOINTS * 16);
 
         for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["mat4"].fromValues(
@@ -8653,7 +8664,7 @@ var SkinLink = MinimalGLTFLoader.SkinLink = function (gltf, linkedSkin, inverseB
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(NUM_MAX_JOINTS * 16);
 
         for (var i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["mat4"].fromValues(
@@ -9912,7 +9923,7 @@ module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\
 /* 21 */
 /***/ (function(module, exports) {
 
-module.exports = "#define POSITION_LOCATION 0\r\n#define NORMAL_LOCATION 1\r\n#define TEXCOORD_0_LOCATION 2\r\n#define JOINTS_0_LOCATION 3\r\n#define JOINTS_1_LOCATION 5\r\n#define WEIGHTS_0_LOCATION 4\r\n#define WEIGHTS_1_LOCATION 6\r\n#define TANGENT_LOCATION 7\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\nuniform mat4 u_MV;\r\nuniform mat4 u_MVNormal;\r\n\r\n#ifdef HAS_SKIN\r\nuniform JointMatrix\r\n{\r\n    mat4 matrix[64];\r\n} u_jointMatrix;\r\n#endif\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\nlayout(location = NORMAL_LOCATION) in vec3 normal;\r\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\r\n\r\n#ifdef HAS_SKIN\r\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\r\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\r\n#ifdef SKIN_VEC8\r\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\r\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\r\n#endif\r\n#endif\r\n\r\n\r\n// #ifdef HAS_TANGENTS\r\n// layout(location = TANGENT_LOCATION) in vec4 tangent;\r\n\r\n// out vec3 v_tangentW;\r\n// out vec3 v_bitangentW;\r\n// #endif\r\n\r\n\r\nout vec3 v_position;\r\nout vec3 v_normal;\r\nout vec2 v_uv;\r\n\r\nvoid main()\r\n{\r\n\r\n#ifdef HAS_SKIN\r\n    mat4 skinMatrix = \r\n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\r\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\r\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\r\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)];\r\n#ifdef SKIN_VEC8\r\n    skinMatrix +=\r\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\r\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\r\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\r\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\r\n#endif\r\n#endif\r\n\r\n    v_uv = uv;\r\n\r\n#ifdef HAS_SKIN\r\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\r\n    vec4 pos = u_MV * skinMatrix * vec4(position, 1.0);\r\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);\r\n#else\r\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\r\n    vec4 pos = u_MV * vec4(position, 1.0);\r\n    gl_Position = u_MVP * vec4(position, 1.0);\r\n#endif\r\n\r\n    v_position = vec3(pos.xyz) / pos.w;\r\n    \r\n    \r\n}"
+module.exports = "#define POSITION_LOCATION 0\r\n#define NORMAL_LOCATION 1\r\n#define TEXCOORD_0_LOCATION 2\r\n#define JOINTS_0_LOCATION 3\r\n#define JOINTS_1_LOCATION 5\r\n#define WEIGHTS_0_LOCATION 4\r\n#define WEIGHTS_1_LOCATION 6\r\n#define TANGENT_LOCATION 7\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\nuniform mat4 u_MV;\r\nuniform mat4 u_MVNormal;\r\n\r\n#ifdef HAS_SKIN\r\nuniform JointMatrix\r\n{\r\n    mat4 matrix[65];\r\n} u_jointMatrix;\r\n#endif\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\nlayout(location = NORMAL_LOCATION) in vec3 normal;\r\nlayout(location = TEXCOORD_0_LOCATION) in vec2 uv;\r\n\r\n#ifdef HAS_SKIN\r\nlayout(location = JOINTS_0_LOCATION) in vec4 joint0;\r\nlayout(location = WEIGHTS_0_LOCATION) in vec4 weight0;\r\n#ifdef SKIN_VEC8\r\nlayout(location = JOINTS_1_LOCATION) in vec4 joint1;\r\nlayout(location = WEIGHTS_1_LOCATION) in vec4 weight1;\r\n#endif\r\n#endif\r\n\r\n\r\n// #ifdef HAS_TANGENTS\r\n// layout(location = TANGENT_LOCATION) in vec4 tangent;\r\n\r\n// out vec3 v_tangentW;\r\n// out vec3 v_bitangentW;\r\n// #endif\r\n\r\n\r\nout vec3 v_position;\r\nout vec3 v_normal;\r\nout vec2 v_uv;\r\n\r\nvoid main()\r\n{\r\n\r\n#ifdef HAS_SKIN\r\n    mat4 skinMatrix = \r\n        weight0.x * u_jointMatrix.matrix[int(joint0.x)] +\r\n        weight0.y * u_jointMatrix.matrix[int(joint0.y)] +\r\n        weight0.z * u_jointMatrix.matrix[int(joint0.z)] +\r\n        weight0.w * u_jointMatrix.matrix[int(joint0.w)];\r\n#ifdef SKIN_VEC8\r\n    skinMatrix +=\r\n        weight1.x * u_jointMatrix.matrix[int(joint1.x)] +\r\n        weight1.y * u_jointMatrix.matrix[int(joint1.y)] +\r\n        weight1.z * u_jointMatrix.matrix[int(joint1.z)] +\r\n        weight1.w * u_jointMatrix.matrix[int(joint1.w)];\r\n#endif\r\n#endif\r\n\r\n    v_uv = uv;\r\n\r\n#ifdef HAS_SKIN\r\n    v_normal = normalize(( u_MVNormal * transpose(inverse(skinMatrix)) * vec4(normal, 0)).xyz);\r\n    vec4 pos = u_MV * skinMatrix * vec4(position, 1.0);\r\n    gl_Position = u_MVP * skinMatrix * vec4(position, 1.0);\r\n#else\r\n    v_normal = normalize((u_MVNormal * vec4(normal, 0)).xyz);\r\n    vec4 pos = u_MV * vec4(position, 1.0);\r\n    gl_Position = u_MVP * vec4(position, 1.0);\r\n#endif\r\n\r\n    v_position = vec3(pos.xyz) / pos.w;\r\n    \r\n    \r\n}"
 
 /***/ }),
 /* 22 */
