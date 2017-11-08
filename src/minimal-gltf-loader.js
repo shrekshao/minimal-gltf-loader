@@ -704,16 +704,19 @@ var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (gltf, s) {
     this.curIdx = 0;
     // this.curValue = 0;
     this.curValue = vec4.create();
-    this.inputMax = this.inputTypedArray[this.inputTypedArray.length - 1];
-
-    this.loopOffset = 0;
+    this.endT = this.inputTypedArray[this.inputTypedArray.length - 1];
+    this.inputMax = this.endT - this.inputTypedArray[0];
 };
 
 var animationOutputValueVec4a = vec4.create();
 var animationOutputValueVec4b = vec4.create();
 
 AnimationSampler.prototype.getValue = function (t) {
-    t -= this.loopOffset;
+    if (t > this.endT) {
+        t -= this.inputMax * Math.ceil((t - this.endT) / this.inputMax);
+        this.curIdx = 0;
+    }
+
     var len = this.inputTypedArray.length;
     while (this.curIdx <= len - 2 && t >= this.inputTypedArray[this.curIdx + 1]) {
         this.curIdx++;
@@ -722,8 +725,6 @@ AnimationSampler.prototype.getValue = function (t) {
 
     if (this.curIdx >= len - 1) {
         // loop
-        
-        this.loopOffset += this.inputMax;
         t -= this.inputMax;
         this.curIdx = 0;
     }
@@ -746,7 +747,6 @@ AnimationSampler.prototype.getValue = function (t) {
 
     switch(this.interpolation) {
         case 'LINEAR': 
-        // v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.loopOffset - this.inputTypedArray[i]);
         v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, u);
         break;
 
