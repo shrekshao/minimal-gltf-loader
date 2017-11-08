@@ -9154,12 +9154,6 @@ glTFLoader.prototype._postprocess = function () {
 
                 n.aabb = BoundingBox.getAABBFromOBB(mesh.boundingBox, tmpMat4);
 
-                // vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
-                // vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
-                
-                // vec3.min(parentBVH.min, parentBVH.min, n.aabb.min);
-                // vec3.max(parentBVH.max, parentBVH.max, n.aabb.max);
-
                 if (n.children.length === 0) {
                     // n.bvh = n.aabb;
                     __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["vec3"].copy(n.bvh.min, n.aabb.min);
