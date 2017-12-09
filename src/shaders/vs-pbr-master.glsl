@@ -17,7 +17,7 @@ uniform mat4 u_MVNormal;
 #ifdef HAS_SKIN
 uniform JointMatrix
 {
-    mat4 matrix[64];
+    mat4 matrix[65];
 } u_jointMatrix;
 #endif
 

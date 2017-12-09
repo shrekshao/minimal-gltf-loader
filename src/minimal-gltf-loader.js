@@ -6,6 +6,8 @@ var globalUniformBlockID = 0;
 
 var curLoader = null;       // @tmp, might be unsafe if loading multiple model at the same time
 
+var NUM_MAX_JOINTS = 65;
+
 // Data classes
 var Scene = MinimalGLTFLoader.Scene = function (gltf, s) {
     this.name = s.name !== undefined ? s.name : null;
@@ -195,6 +197,15 @@ var Node = MinimalGLTFLoader.Node = function (n, nodeID) {
         for(var i = 0; i < 16; ++i) {
             this.matrix[i] = n.matrix[i];
         }
+
+        this.translation = vec3.create();
+        mat4.getTranslation(this.translation, this.matrix);
+
+        this.rotation = quat.create();
+        mat4.getRotation(this.rotation, this.matrix);
+
+        this.scale = vec3.create();
+        mat4.getScaling(this.scale, this.matrix);
     } else {
         // this.translation = null;
         // this.rotation = null;
@@ -556,7 +567,7 @@ var Skin = MinimalGLTFLoader.Skin = function (gltf, s, skinID) {
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(NUM_MAX_JOINTS * 16);
 
         for (i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(mat4.fromValues(
@@ -620,7 +631,7 @@ var SkinLink = MinimalGLTFLoader.SkinLink = function (gltf, linkedSkin, inverseB
         // );      // for copy to UBO
 
         // @tmp: fixed length to coordinate with shader, for copy to UBO
-        this.jointMatrixUnidormBufferData = new Float32Array(64 * 16);
+        this.jointMatrixUnidormBufferData = new Float32Array(NUM_MAX_JOINTS * 16);
 
         for (var i = 0, len = this.inverseBindMatricesData.length; i < len; i += 16) {
             this.inverseBindMatrix.push(mat4.fromValues(
@@ -693,16 +704,19 @@ var AnimationSampler = MinimalGLTFLoader.AnimationSampler = function (gltf, s) {
     this.curIdx = 0;
     // this.curValue = 0;
     this.curValue = vec4.create();
-    this.inputMax = this.inputTypedArray[this.inputTypedArray.length - 1];
-
-    this.loopOffset = 0;
+    this.endT = this.inputTypedArray[this.inputTypedArray.length - 1];
+    this.inputMax = this.endT - this.inputTypedArray[0];
 };
 
 var animationOutputValueVec4a = vec4.create();
 var animationOutputValueVec4b = vec4.create();
 
 AnimationSampler.prototype.getValue = function (t) {
-    t -= this.loopOffset;
+    if (t > this.endT) {
+        t -= this.inputMax * Math.ceil((t - this.endT) / this.inputMax);
+        this.curIdx = 0;
+    }
+
     var len = this.inputTypedArray.length;
     while (this.curIdx <= len - 2 && t >= this.inputTypedArray[this.curIdx + 1]) {
         this.curIdx++;
@@ -711,8 +725,6 @@ AnimationSampler.prototype.getValue = function (t) {
 
     if (this.curIdx >= len - 1) {
         // loop
-        
-        this.loopOffset += this.inputMax;
         t -= this.inputMax;
         this.curIdx = 0;
     }
@@ -735,7 +747,6 @@ AnimationSampler.prototype.getValue = function (t) {
 
     switch(this.interpolation) {
         case 'LINEAR': 
-        // v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, t - this.loopOffset - this.inputTypedArray[i]);
         v4lerp(this.curValue, animationOutputValueVec4a, animationOutputValueVec4b, u);
         break;
 
@@ -1072,12 +1083,6 @@ glTFLoader.prototype._postprocess = function () {
             if (mesh.boundingBox) {
 
                 n.aabb = BoundingBox.getAABBFromOBB(mesh.boundingBox, tmpMat4);
-
-                // vec3.min(scene.boundingBox.min, scene.boundingBox.min, n.aabb.min);
-                // vec3.max(scene.boundingBox.max, scene.boundingBox.max, n.aabb.max);
-                
-                // vec3.min(parentBVH.min, parentBVH.min, n.aabb.min);
-                // vec3.max(parentBVH.max, parentBVH.max, n.aabb.max);
 
                 if (n.children.length === 0) {
                     // n.bvh = n.aabb;
