@@ -267,6 +267,8 @@ var Utils = Utils || {};
             );
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.bindTexture(gl.TEXTURE_2D, null);
         }
     }
@@ -1088,12 +1090,13 @@ var Utils = Utils || {};
             gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
             gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
 
+            // console.log( (gl.getTexParameter(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S)).toString(16) );            
+
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
 
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-
 
             gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
             

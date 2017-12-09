@@ -2793,6 +2793,8 @@ var Utils = Utils || {};
             );
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.bindTexture(gl.TEXTURE_2D, null);
         }
     }
@@ -3614,12 +3616,13 @@ var Utils = Utils || {};
             gl.activeTexture(gl.TEXTURE0 + BRDF_LUT.textureIndex);
             gl.bindTexture(gl.TEXTURE_2D, BRDF_LUT.texture);
 
+            // console.log( (gl.getTexParameter(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S)).toString(16) );            
+
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.texture);
 
             gl.activeTexture(gl.TEXTURE0 + CUBE_MAP.textureIBLDiffuseIndex);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, CUBE_MAP.textureIBLDiffuse);
-
 
             gl.uniform4fv(program.uniformLocations.baseColorFactor, baseColor);
             
@@ -9888,25 +9891,25 @@ module.exports = function (css) {
 /* 17 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n#define POSITION_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\n\nlayout(location = POSITION_LOCATION) in vec3 position;\n\nvoid main()\n{\n    gl_Position = u_MVP * vec4(position, 1.0) ;\n}"
+module.exports = "#version 300 es\r\n#define POSITION_LOCATION 0\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\n\r\nlayout(location = POSITION_LOCATION) in vec3 position;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = u_MVP * vec4(position, 1.0) ;\r\n}"
 
 /***/ }),
 /* 18 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n#define FRAG_COLOR_LOCATION 0\n\nprecision highp float;\nprecision highp int;\n\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\n\nvoid main()\n{\n    color = vec4(1.0, 0.0, 0.0, 1.0);\n}"
+module.exports = "#version 300 es\r\n#define FRAG_COLOR_LOCATION 0\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nlayout(location = FRAG_COLOR_LOCATION) out vec4 color;\r\n\r\nvoid main()\r\n{\r\n    color = vec4(1.0, 0.0, 0.0, 1.0);\r\n}"
 
 /***/ }),
 /* 19 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\n\nuniform mat4 u_MVP;\n\nlayout(location = 0) in vec3 position;\n\nout vec3 texcoord;\n\nvoid main()\n{\n    vec4 pos = u_MVP * vec4(position, 1.0);\n    gl_Position = pos.xyww;\n    texcoord = position;\n}"
+module.exports = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform mat4 u_MVP;\r\n\r\nlayout(location = 0) in vec3 position;\r\n\r\nout vec3 texcoord;\r\n\r\nvoid main()\r\n{\r\n    vec4 pos = u_MVP * vec4(position, 1.0);\r\n    gl_Position = pos.xyww;\r\n    texcoord = position;\r\n}"
 
 /***/ }),
 /* 20 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\nprecision highp float;\nprecision highp int;\n\nuniform samplerCube u_environment;\n\nin vec3 texcoord;\n\nout vec4 color;\n\nvoid main()\n{\n    color = texture(u_environment, texcoord);\n}"
+module.exports = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform samplerCube u_environment;\r\n\r\nin vec3 texcoord;\r\n\r\nout vec4 color;\r\n\r\nvoid main()\r\n{\r\n    color = texture(u_environment, texcoord);\r\n}"
 
 /***/ }),
 /* 21 */
